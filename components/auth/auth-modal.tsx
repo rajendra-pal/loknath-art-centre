@@ -77,10 +77,10 @@ export function AuthModal() {
     const form = document.getElementById('auth-form') as HTMLFormElement | null;
     if (!form) return;
     (form.elements.namedItem('email') as HTMLInputElement).value =
-      kind === 'admin' ? 'admin@loknath.in' : 'demo@loknath.in';
+      kind === 'admin' ? 'rakhalchandra57@gmail.com' : 'demo@loknath.in';
     (form.elements.namedItem('password') as HTMLInputElement).value =
-      kind === 'admin' ? 'admin123' : 'demo123';
-    setPasswordValue(kind === 'admin' ? 'admin123' : 'demo123');
+      kind === 'admin' ? 'rakhal57' : 'demo123';
+    setPasswordValue(kind === 'admin' ? 'rakhal57' : 'demo123');
   };
 
   return (

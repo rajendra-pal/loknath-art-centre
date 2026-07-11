@@ -123,11 +123,11 @@ export function AuthProvider({
   async function login(email: string, password: string, role: 'customer' | 'admin' = 'customer') {
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (role === 'admin' && normalizedEmail === 'admin@loknath.in' && password === 'admin123') {
+    if (role === 'admin' && normalizedEmail === 'rakhalchandra57@gmail.com' && password === 'rakhal57') {
       const adminUser: User = {
         id: 'demo-admin',
         name: 'Admin',
-        email: 'admin@loknath.in',
+        email: 'rakhalchandra57@gmail.com',
         role: 'admin',
         joinedAt: new Date().toLocaleDateString('en-IN'),
       };
