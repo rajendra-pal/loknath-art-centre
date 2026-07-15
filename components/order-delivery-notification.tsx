@@ -13,7 +13,6 @@ type Order = {
   items: Array<{ name: string }>;
 };
 
-const ordersKey = 'loknath-store-orders';
 
 export function OrderDeliveryNotification() {
   const { user } = useAuth();
@@ -23,9 +22,12 @@ export function OrderDeliveryNotification() {
 
     const showNotifications = async () => {
       const { data, error } = await supabase.from('store_orders').select('order_data').order('created_at', { ascending: false });
-      const orders = !error && data
-        ? data.map((row) => row.order_data as Order)
-        : JSON.parse(localStorage.getItem(ordersKey) || '[]') as Order[];
+      if (error) {
+        console.error(error);
+        showToast({ title: 'Unable to check order updates', description: error.message, variant: 'destructive' });
+        return;
+      }
+      const orders = (data ?? []).map((row) => row.order_data as Order);
       const confirmedOrders = orders.filter((order) =>
         order.customer.email === user.email && (order.status === 'Confirmed' || order.status === 'Delivered')
       );

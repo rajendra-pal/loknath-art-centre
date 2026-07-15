@@ -4,13 +4,11 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
-import { CustomCursor } from '@/components/effects/custom-cursor';
-import { FloatingParticles } from '@/components/effects/floating-particles';
-import { ClickSplash } from '@/components/effects/click-splash';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/components/auth/auth-context';
 import { AuthModal } from '@/components/auth/auth-modal';
 import { LoadingScreen } from '@/components/loading-screen';
+import { ClientEffects } from '@/components/client-effects';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -77,9 +75,7 @@ export default function RootLayout({
           defaultTheme="light"
         >
           <AuthProvider>
-            <CustomCursor />
-            <FloatingParticles />
-            <ClickSplash />
+            <ClientEffects />
             <Navbar />
             <main className="relative overflow-x-hidden">{children}</main>
             <Footer />

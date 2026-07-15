@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/lib/supabase/client';
 import { OrderOutcomeOverlay } from '@/components/order-outcome-overlay';
+import { showToast } from '@/components/ui/toaster';
 
 export type AdminOrder = {
   id: string;
@@ -31,7 +32,7 @@ function OrderOperations({ order, onUpdate }: { order: AdminOrder; onUpdate: (or
   const [saving, setSaving] = useState(false);
   const [outcome, setOutcome] = useState<'confirmed' | 'cancelled' | null>(null);
   useEffect(() => setDeliveryDate(order.deliveryDate || ''), [order]);
-  const save = async (next: AdminOrder, nextOutcome?: 'confirmed' | 'cancelled') => { setSaving(true); const { error } = await supabase.from('store_orders').update({ order_data: next }).eq('id', next.id); setSaving(false); if (!error) { onUpdate(next); if (nextOutcome) setOutcome(nextOutcome); } };
+  const save = async (next: AdminOrder, nextOutcome?: 'confirmed' | 'cancelled') => { setSaving(true); const { error } = await supabase.from('store_orders').update({ order_data: next }).eq('id', next.id).select(); setSaving(false); if (error) { console.error(error); showToast({ title: 'Unable to update order', description: error.message, variant: 'destructive' }); throw error; } onUpdate(next); if (nextOutcome) setOutcome(nextOutcome); };
   const names = order.items.map((item) => item.name).join(', ');
   const confirm = () => { if (!deliveryDate) return; void save({ ...order, status: 'Confirmed', deliveryDate, adminMessage: `${names} is coming on ${new Date(`${deliveryDate}T00:00:00`).toLocaleDateString('en-IN')}.` }, 'confirmed'); };
   const deliver = () => void save({ ...order, status: 'Delivered', adminMessage: 'Your order has been delivered successfully.' });

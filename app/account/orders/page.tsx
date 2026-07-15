@@ -8,6 +8,7 @@ import { useAuth } from '@/components/auth/auth-context';
 import { Button } from '@/components/ui/button';
 import { formatPrice } from '@/lib/utils';
 import { supabase } from '@/lib/supabase/client';
+import { showToast } from '@/components/ui/toaster';
 import { OrderOutcomeOverlay } from '@/components/order-outcome-overlay';
 
 type CustomerOrder = {
@@ -31,7 +32,6 @@ type CustomerOrder = {
   adminMessage?: string;
 };
 
-const storeOrdersKey = 'loknath-store-orders';
 
 const statusColors: Record<string, string> = {
   'New Order': 'bg-orange-100 text-orange-700',
@@ -49,7 +49,12 @@ export default function OrdersPage() {
   const cancelOrder = async (order: CustomerOrder) => {
     const updatedOrder = { ...order, status: 'Cancelled', adminMessage: 'This order was cancelled by the customer.' };
     const { error } = await supabase.from('store_orders').update({ order_data: updatedOrder }).eq('id', order.id);
-    if (!error) {
+    if (error) {
+      console.error(error);
+      showToast({ title: 'Unable to cancel order', description: error.message, variant: 'destructive' });
+      return;
+    }
+    {
       setOrders((current) => current.map((item) => item.id === order.id ? updatedOrder : item));
       setOutcome('cancelled');
     }
@@ -59,12 +64,12 @@ export default function OrdersPage() {
     if (!user) return;
     const loadOrders = async () => {
       const { data, error } = await supabase.from('store_orders').select('order_data').order('created_at', { ascending: false });
-      if (!error && data) {
-        setOrders(data.map((row) => row.order_data as CustomerOrder).filter((order) => order.customer.email === user.email));
+      if (error) {
+        console.error(error);
+        showToast({ title: 'Unable to load orders', description: error.message, variant: 'destructive' });
         return;
       }
-      const savedOrders = JSON.parse(localStorage.getItem(storeOrdersKey) || '[]') as CustomerOrder[];
-      setOrders(savedOrders.filter((order) => order.customer.email === user.email));
+      setOrders((data ?? []).map((row) => row.order_data as CustomerOrder).filter((order) => order.customer.email === user.email));
     };
     void loadOrders();
     window.addEventListener('focus', loadOrders);

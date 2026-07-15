@@ -1,26 +1,32 @@
 'use client';
 
-type Order = { total: number; status: string; paymentMethod: string };
-type Student = { name: string; monthlyFee: number; paidMonths: string[] };
-type Product = { name: string; stock: number };
+import { useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { showToast } from '@/components/ui/toaster';
 
+type Order = { total: number; status: string; paymentMethod: string };
+type Student = { monthly_fee: number; paid_months: string[] };
+type Product = { name: string; stock: number };
 const currency = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
 
-export function AdminReports({ orders, students, products }: { orders: Order[]; students: Student[]; products: Product[] }) {
-  const studentIncome = students.reduce((total, student) => total + student.monthlyFee * student.paidMonths.length, 0);
-  const deliveredCod = orders.filter((order) => order.paymentMethod === 'Cash on Delivery' && order.status === 'Delivered').reduce((total, order) => total + order.total, 0);
-  const onlineIncome = orders.filter((order) => order.paymentMethod !== 'Cash on Delivery' && (order.status === 'Confirmed' || order.status === 'Delivered')).reduce((total, order) => total + order.total, 0);
-  const pendingCod = orders.filter((order) => order.paymentMethod === 'Cash on Delivery' && order.status !== 'Delivered').reduce((total, order) => total + order.total, 0);
-  const total = studentIncome + deliveredCod + onlineIncome;
-  const incomeMixTotal = Math.max(total, 1);
-  const maximum = Math.max(studentIncome, deliveredCod, onlineIncome, pendingCod, 1);
-  const confirmed = orders.filter((order) => order.status === 'Confirmed').length;
-  const delivered = orders.filter((order) => order.status === 'Delivered').length;
-  const cancelled = orders.filter((order) => order.status === 'Cancelled').length;
-  const topProduct = [...products].sort((a, b) => a.stock - b.stock)[0];
-  const chart = `conic-gradient(#8b5cf6 0 ${(studentIncome / incomeMixTotal) * 100}%, #f97316 ${(studentIncome / incomeMixTotal) * 100}% ${((studentIncome + onlineIncome) / incomeMixTotal) * 100}%, #10b981 ${((studentIncome + onlineIncome) / incomeMixTotal) * 100}% 100%)`;
-  const bars = [['Student fees', studentIncome, '#8b5cf6'], ['Online payments', onlineIncome, '#f97316'], ['Delivered COD', deliveredCod, '#10b981'], ['Pending COD', pendingCod, '#f59e0b']] as const;
-  return <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-palette-purple">Business analytics</p><h2 className="mt-1 font-display text-3xl font-bold text-slate-900">Reports overview</h2></div><div className="rounded-2xl bg-emerald-50 px-4 py-3 text-right"><p className="text-xs font-bold text-emerald-700">TOTAL INCOME</p><p className="font-display text-2xl font-bold text-emerald-800">{currency(total)}</p></div></div><div className="mt-7 grid gap-6 xl:grid-cols-[0.9fr_1.4fr]"><div className="rounded-3xl bg-slate-950 p-6 text-white"><p className="text-sm font-bold text-white/60">Income mix</p><div className="mt-6 flex items-center justify-center"><div className="grid h-48 w-48 place-items-center rounded-full" style={{ background: chart }}><div className="grid h-32 w-32 place-items-center rounded-full bg-slate-950 text-center"><div><p className="text-xs text-white/50">Recorded income</p><b className="mt-1 block text-xl">{currency(total)}</b></div></div></div></div><div className="mt-7 grid grid-cols-3 gap-2 text-center text-xs"><span><i className="mx-auto mb-1 block h-2.5 w-2.5 rounded-full bg-violet-500" />Fees</span><span><i className="mx-auto mb-1 block h-2.5 w-2.5 rounded-full bg-orange-500" />Online</span><span><i className="mx-auto mb-1 block h-2.5 w-2.5 rounded-full bg-emerald-500" />COD</span></div></div><div className="rounded-3xl bg-slate-50 p-6"><p className="text-sm font-bold text-slate-600">Revenue breakdown</p><div className="mt-6 space-y-5">{bars.map(([label, value, color]) => <div key={label}><div className="mb-2 flex justify-between text-sm"><b className="text-slate-700">{label}</b><span className="font-bold text-slate-900">{currency(value)}</span></div><div className="h-3 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full transition-all" style={{ width: `${(value / maximum) * 100}%`, backgroundColor: color }} /></div></div>)}</div></div></div><div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Confirmed orders" value={confirmed} color="text-blue-700 bg-blue-50" /><Metric label="Delivered orders" value={delivered} color="text-emerald-700 bg-emerald-50" /><Metric label="Cancelled orders" value={cancelled} color="text-rose-700 bg-rose-50" /><Metric label="Top product signal" value={topProduct?.name || 'No data'} color="text-violet-700 bg-violet-50" /></div><div className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-800">Pending COD amount: {currency(pendingCod)} across {orders.filter((order) => order.paymentMethod === 'Cash on Delivery' && order.status !== 'Delivered').length} active cash-on-delivery orders.</div></section>;
+export function AdminReports() {
+  const [orders, setOrders] = useState<Order[]>([]); const [students, setStudents] = useState<Student[]>([]); const [products, setProducts] = useState<Product[]>([]); const [saving, setSaving] = useState(false);
+  const load = async () => {
+    const [{ data: orderRows, error: ordersError }, { data: studentRows, error: studentsError }, { data: productRows, error: productsError }] = await Promise.all([
+      supabase.from('store_orders').select('order_data'), supabase.from('students').select('monthly_fee, paid_months'), supabase.from('products').select('name, stock'),
+    ]);
+    const error = ordersError || studentsError || productsError;
+    if (error) { console.error(error); showToast({ title: 'Unable to load reports', description: error.message, variant: 'destructive' }); return; }
+    setOrders((orderRows ?? []).map((row) => row.order_data as Order)); setStudents(studentRows ?? []); setProducts(productRows ?? []);
+  };
+  useEffect(() => { void load(); }, []);
+  const summary = useMemo(() => {
+    const studentIncome = students.reduce((total, student) => total + Number(student.monthly_fee) * (student.paid_months?.length ?? 0), 0);
+    const deliveredCod = orders.filter((order) => order.paymentMethod === 'Cash on Delivery' && order.status === 'Delivered').reduce((total, order) => total + Number(order.total), 0);
+    const onlineIncome = orders.filter((order) => order.paymentMethod !== 'Cash on Delivery' && ['Confirmed', 'Delivered'].includes(order.status)).reduce((total, order) => total + Number(order.total), 0);
+    return { studentIncome, deliveredCod, onlineIncome, total: studentIncome + deliveredCod + onlineIncome, orderCount: orders.length, studentCount: students.length, topProduct: [...products].sort((a, b) => a.stock - b.stock)[0]?.name ?? 'No data' };
+  }, [orders, products, students]);
+  const generate = async () => { setSaving(true); const { data, error } = await supabase.from('reports').insert({ report_type: 'revenue', title: `Revenue report ${new Date().toLocaleDateString('en-IN')}`, description: 'Generated from live Supabase data.', data: summary, date_from: new Date().toISOString().slice(0, 10), date_to: new Date().toISOString().slice(0, 10) }).select(); setSaving(false); if (error) { console.error(error); showToast({ title: 'Unable to generate report', description: error.message, variant: 'destructive' }); throw error; } showToast({ title: 'Report saved', description: `Report ${data?.[0]?.id ?? ''} created.`, variant: 'success' }); };
+  return <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/40"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.2em] text-palette-purple">Business analytics</p><h2 className="mt-1 font-display text-3xl font-bold text-slate-900">Reports overview</h2></div><button onClick={() => void generate()} disabled={saving} className="rounded-xl bg-palette-purple px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Generating…' : 'Generate report'}</button></div><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Metric label="Total income" value={currency(summary.total)} /><Metric label="Orders" value={summary.orderCount} /><Metric label="Students" value={summary.studentCount} /><Metric label="Top product signal" value={summary.topProduct} /></div><div className="mt-6 grid gap-3 sm:grid-cols-3"><Metric label="Student fees" value={currency(summary.studentIncome)} /><Metric label="Online payments" value={currency(summary.onlineIncome)} /><Metric label="Delivered COD" value={currency(summary.deliveredCod)} /></div></section>;
 }
-
-function Metric({ label, value, color }: { label: string; value: string | number; color: string }) { return <div className={`rounded-2xl p-4 ${color}`}><p className="text-xs font-bold uppercase tracking-wide opacity-70">{label}</p><p className="mt-2 text-xl font-bold">{value}</p></div>; }
+function Metric({ label, value }: { label: string; value: string | number }) { return <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 text-xl font-bold text-slate-900">{value}</p></div>; }

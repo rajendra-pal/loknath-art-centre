@@ -55,7 +55,6 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const demoUserKey = 'loknath-demo-user';
 
 export function AuthProvider({
   children,
@@ -87,13 +86,6 @@ export function AuthProvider({
   async function getCurrentUser() {
     setLoading(true);
 
-    const demoUser = localStorage.getItem(demoUserKey);
-    if (demoUser) {
-      setUser(JSON.parse(demoUser));
-      setLoading(false);
-      return;
-    }
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -104,16 +96,27 @@ export function AuthProvider({
       return;
     }
 
+    const { data: account, error: accountError } = await supabase
+      .from('accounts')
+      .select('role, name, phone, address')
+      .eq('id', user.id)
+      .single();
+
+    if (accountError || !account) {
+      console.error(accountError);
+      showToast({ title: 'Unable to load account', description: accountError?.message ?? 'Account record not found.', variant: 'destructive' });
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     setUser({
       id: user.id,
-      name:
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        'User',
+      name: account.name,
       email: user.email || '',
-      role: user.user_metadata?.role === 'admin' ? 'admin' : 'customer',
-      phone: user.user_metadata?.phone,
-      address: user.user_metadata?.address,
+      role: account.role === 'admin' ? 'admin' : 'customer',
+      phone: account.phone ?? undefined,
+      address: account.address ?? undefined,
       joinedAt: user.created_at ? new Date(user.created_at).toLocaleDateString('en-IN') : undefined,
     });
 
@@ -121,48 +124,6 @@ export function AuthProvider({
   }
 
   async function login(email: string, password: string, role: 'customer' | 'admin' = 'customer') {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (role === 'admin' && normalizedEmail === 'rakhalchandra57@gmail.com' && password === 'rakhal57') {
-      const adminUser: User = {
-        id: 'demo-admin',
-        name: 'Admin',
-        email: 'rakhalchandra57@gmail.com',
-        role: 'admin',
-        joinedAt: new Date().toLocaleDateString('en-IN'),
-      };
-
-      localStorage.setItem(demoUserKey, JSON.stringify(adminUser));
-      setUser(adminUser);
-
-      showToast({
-        title: 'Admin Login Successful',
-        variant: 'success',
-      });
-
-      return { ok: true };
-    }
-
-    if (role === 'customer' && normalizedEmail === 'demo@loknath.in' && password === 'demo123') {
-      const demoCustomer: User = {
-        id: 'demo-customer',
-        name: 'Demo Customer',
-        email: 'demo@loknath.in',
-        role: 'customer',
-        joinedAt: new Date().toLocaleDateString('en-IN'),
-      };
-
-      localStorage.setItem(demoUserKey, JSON.stringify(demoCustomer));
-      setUser(demoCustomer);
-
-      showToast({
-        title: 'Login Successful',
-        variant: 'success',
-      });
-
-      return { ok: true };
-    }
-
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -192,7 +153,7 @@ export function AuthProvider({
     phone?: string;
     password: string;
   }) {
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -207,6 +168,23 @@ export function AuthProvider({
         ok: false,
         error: error.message,
       };
+
+    if (!signUpData.user) {
+      return { ok: false, error: 'Supabase did not return a user for this registration.' };
+    }
+
+    const { error: accountError } = await supabase.from('accounts').insert({
+      id: signUpData.user.id,
+      name,
+      email,
+      role: 'customer',
+    }).select();
+
+    if (accountError) {
+      console.error(accountError);
+      showToast({ title: 'Account setup failed', description: accountError.message, variant: 'destructive' });
+      return { ok: false, error: accountError.message };
+    }
 
     showToast({
       title: 'Account Created',
@@ -227,8 +205,6 @@ export function AuthProvider({
 
   async function logout() {
     await supabase.auth.signOut();
-    localStorage.removeItem(demoUserKey);
-
     setUser(null);
 
     showToast({
@@ -239,13 +215,8 @@ export function AuthProvider({
   async function updateProfile(data: { phone: string; address: string }) {
     if (!user) return { ok: false, error: 'Not logged in' };
     const updatedUser = { ...user, phone: data.phone, address: data.address };
-    if (user.id.startsWith('demo-')) {
-      localStorage.setItem(demoUserKey, JSON.stringify(updatedUser));
-      setUser(updatedUser);
-      return { ok: true };
-    }
-    const { error } = await supabase.auth.updateUser({ data: { phone: data.phone, address: data.address } });
-    if (error) return { ok: false, error: error.message };
+    const { error: accountError } = await supabase.from('accounts').update({ phone: data.phone, address: data.address }).eq('id', user.id).select();
+    if (accountError) { console.error(accountError); showToast({ title: 'Profile update failed', description: accountError.message, variant: 'destructive' }); return { ok: false, error: accountError.message }; }
     setUser(updatedUser);
     return { ok: true };
   }
