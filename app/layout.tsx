@@ -1,14 +1,12 @@
 import type { Metadata } from 'next';
 import { Poppins, Hind_Siliguri } from 'next/font/google';
 import './globals.css';
-import { ThemeProvider } from '@/components/theme-provider';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
-import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/components/auth/auth-context';
-import { AuthModal } from '@/components/auth/auth-modal';
 import { LoadingScreen } from '@/components/loading-screen';
 import { ClientEffects } from '@/components/client-effects';
+import { Providers } from '@/app/providers';
+import { LanguageBootstrap } from '@/components/language-bootstrap';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -57,6 +55,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
+    // Default lang is bn (matches the current canonical site). The client
+    // LanguageBootstrap flips this to "en" on mount if the user's stored
+    // preference is English. suppressHydrationWarning avoids the inevitable
+    // mismatch with the html attribute.
     <html lang="bn" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -68,21 +70,16 @@ export default function RootLayout({
       </head>
       <body
         className={`${poppins.variable} ${hindSiliguri.variable} font-bengali`}
+        suppressHydrationWarning
       >
+        <LanguageBootstrap />
         <LoadingScreen />
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-        >
-          <AuthProvider>
-            <ClientEffects />
-            <Navbar />
-            <main className="relative overflow-x-hidden">{children}</main>
-            <Footer />
-            <Toaster />
-            <AuthModal />
-          </AuthProvider>
-        </ThemeProvider>
+        <Providers>
+          <ClientEffects />
+          <Navbar />
+          <main className="relative overflow-x-hidden">{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );

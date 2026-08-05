@@ -13,6 +13,7 @@ export type User = {
   phone?: string;
   address?: string;
   joinedAt?: string;
+  language?: 'en' | 'bn';
 };
 
 type AuthContextType = {
@@ -98,14 +99,115 @@ export function AuthProvider({
 
     const { data: account, error: accountError } = await supabase
       .from('accounts')
-      .select('role, name, phone, address')
+      .select('role, name, phone, address, language')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (accountError || !account) {
-      console.error(accountError);
-      showToast({ title: 'Unable to load account', description: accountError?.message ?? 'Account record not found.', variant: 'destructive' });
+    if (accountError) {
+      console.error('Account lookup failed:', accountError.message ?? accountError);
+      showToast({ title: 'Unable to load account', description: accountError.message ?? 'Account record not found.', variant: 'destructive' });
       setUser(null);
+      setLoading(false);
+      return;
+    }
+
+    if (!account) {
+      // No account row yet. Possible reasons:
+      //   1. Fresh Google OAuth sign-in (no row has been provisioned).
+      //   2. The user previously registered with email/password, so an
+      //      `accounts` row already exists under a *different* auth.users.id
+      //      but with the same email — the email column is UNIQUE, so a fresh
+      //      INSERT would violate the constraint. Re-attach the existing row
+      //      to the current auth.uid() instead.
+      const fallbackName =
+        (user.user_metadata?.full_name as string | undefined) ??
+        (user.email ? user.email.split('@')[0] : 'Customer');
+
+      if (user.email) {
+        const { data: byEmail, error: byEmailError } = await supabase
+          .from('accounts')
+          .select('id, role, name, phone, address, language')
+          .eq('email', user.email)
+          .maybeSingle();
+
+        if (byEmailError) {
+          console.error('Account lookup by email failed:', byEmailError.message ?? byEmailError);
+          showToast({ title: 'Unable to load account', description: byEmailError.message ?? 'Account record not found.', variant: 'destructive' });
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        if (byEmail) {
+          // Re-attach the existing account to the current auth user.
+          const { data: claimed, error: claimError } = await supabase
+            .from('accounts')
+            .update({ id: user.id })
+            .eq('id', byEmail.id)
+            .select('role, name, phone, address, language')
+            .single();
+
+          if (claimError || !claimed) {
+            console.error('Account re-attach failed:', claimError?.message ?? claimError);
+            showToast({ title: 'Unable to load account', description: claimError?.message ?? 'Account record not found.', variant: 'destructive' });
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+
+          setUser({
+            id: user.id,
+            name: claimed.name,
+            email: user.email,
+            role: claimed.role === 'admin' ? 'admin' : 'customer',
+            phone: claimed.phone ?? undefined,
+            address: claimed.address ?? undefined,
+            joinedAt: user.created_at ? new Date(user.created_at).toLocaleDateString('en-IN') : undefined,
+            language: (claimed.language ?? 'en') as 'en' | 'bn',
+          });
+
+          // Mirror the stored language into localStorage so the toggle reflects it
+          // on this device right away (no extra round-trip on first paint).
+          try {
+            const stored = (claimed.language ?? 'en') as 'en' | 'bn';
+            window.localStorage.setItem('lac.lang', stored);
+          } catch { /* ignore */ }
+
+          setLoading(false);
+          return;
+        }
+      }
+
+      const { data: inserted, error: insertError } = await supabase
+        .from('accounts')
+        .insert({
+          id: user.id,
+          email: user.email ?? '',
+          name: fallbackName,
+          role: 'customer',
+        })
+        .select('role, name, phone, address, language')
+        .single();
+
+      if (insertError || !inserted) {
+        console.error('Account provisioning failed:', insertError?.message ?? insertError);
+        showToast({ title: 'Unable to load account', description: insertError?.message ?? 'Account record not found.', variant: 'destructive' });
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      setUser({
+        id: user.id,
+        name: inserted.name,
+        email: user.email || '',
+        role: inserted.role === 'admin' ? 'admin' : 'customer',
+        phone: inserted.phone ?? undefined,
+        address: inserted.address ?? undefined,
+        joinedAt: user.created_at ? new Date(user.created_at).toLocaleDateString('en-IN') : undefined,
+        language: (inserted.language ?? 'en') as 'en' | 'bn',
+      });
+
       setLoading(false);
       return;
     }
@@ -118,7 +220,13 @@ export function AuthProvider({
       phone: account.phone ?? undefined,
       address: account.address ?? undefined,
       joinedAt: user.created_at ? new Date(user.created_at).toLocaleDateString('en-IN') : undefined,
+      language: (account.language ?? 'en') as 'en' | 'bn',
     });
+
+    // Mirror stored language into localStorage so the in-page toggle reflects it.
+    try {
+      window.localStorage.setItem('lac.lang', (account.language ?? 'en') as 'en' | 'bn');
+    } catch { /* ignore */ }
 
     setLoading(false);
   }
@@ -173,15 +281,38 @@ export function AuthProvider({
       return { ok: false, error: 'Supabase did not return a user for this registration.' };
     }
 
-    const { error: accountError } = await supabase.from('accounts').insert({
-      id: signUpData.user.id,
-      name,
-      email,
-      role: 'customer',
-    }).select();
+    // The user exists in auth.users now. The accounts row may already exist
+    // (e.g. a previous Google sign-in created it under a different
+    // auth.users.id) — the email column is UNIQUE, so a blind insert can fail.
+    // Check for an existing row by email and re-attach it; otherwise insert.
+    const { data: existing } = await supabase
+      .from('accounts')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
+
+    let accountError: { message: string } | null = null;
+
+    if (existing) {
+      const { error: claimError } = await supabase
+        .from('accounts')
+        .update({ id: signUpData.user.id, name, role: 'customer' })
+        .eq('id', existing.id);
+
+      if (claimError) accountError = { message: claimError.message };
+    } else {
+      const { error: insertError } = await supabase.from('accounts').insert({
+        id: signUpData.user.id,
+        name,
+        email,
+        role: 'customer',
+      });
+
+      if (insertError) accountError = { message: insertError.message };
+    }
 
     if (accountError) {
-      console.error(accountError);
+      console.error('Account setup failed:', accountError.message);
       showToast({ title: 'Account setup failed', description: accountError.message, variant: 'destructive' });
       return { ok: false, error: accountError.message };
     }

@@ -1,23 +1,123 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Users, BookOpen, ArrowRight, X } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { BrushDivider } from '@/components/ui/brush-divider';
-import { courses, Course } from '@/lib/data';
+import { courses as seedCourses, Course } from '@/lib/data';
+import type { Localized } from '@/lib/i18n/pick';
+import { supabase } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/i18n/context';
 
-const levelColors: Record<string, string> = {
-  শুরু: '#10B981',
-  মধ্যম: '#3B82F6',
-  উচ্চ: '#FF6B35',
+/** Bengali-level lookup table — same for both languages (used as a CSS key). */
+const LEVEL_COLORS_BN: Record<string, string> = {
+  'শুরু': '#10B981',
+  'মধ্যম': '#3B82F6',
+  'উচ্চ': '#FF6B35',
   'সকল স্তর': '#8B5CF6',
 };
 
+/** Wrap plain string in { en, bn } for i18n-aware call sites. */
+const bnWrap = (s: string): Localized<string> => ({ en: s, bn: s });
+/** Wrap a union-typed literal in { en, bn } preserving both narrowings. */
+function bnWrapUnion<T extends string>(s: T): Localized<T> {
+  return { en: s, bn: s };
+}
+
+type DbCourse = {
+  id: string;
+  title: string;
+  title_bn: string;
+  title_en: string;
+  duration: string;
+  age_group: string;
+  level: Course['level']['en'];
+  description: string;
+  image: string | null;
+  color: string;
+  category: string;
+  is_active: boolean;
+  updated_at?: string;
+};
+
+const toUiCourse = (row: DbCourse): Course => ({
+  id: row.id,
+  title: row.title,
+  titleBn: row.title_bn,
+  titleEn: row.title_en,
+  displayTitle: row.title_en === row.title_bn ? bnWrap(row.title_bn) : { en: row.title_en, bn: row.title_bn },
+  duration: bnWrap(row.duration),
+  ageGroup: bnWrap(row.age_group),
+  level: bnWrapUnion(row.level),
+  description: bnWrap(row.description),
+  image: row.image || '/logo.png',
+  color: row.color || '#8B5CF6',
+  category: bnWrap(row.category),
+});
+
+const withCacheBust = (image: string, version?: string): string => {
+  if (!image) return '/logo.png';
+  if (image.startsWith('data:')) return image;
+  if (!image.startsWith('/')) return image;
+  const sep = image.includes('?') ? '&' : '?';
+  return `${image}${sep}v=${encodeURIComponent(version ?? '0')}`;
+};
+
 export function Courses() {
+  const { t } = useLanguage();
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [courses, setCourses] = useState<Course[]>(seedCourses);
+  const [versions, setVersions] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (cancelled) return;
+      if (error) {
+        console.warn('Courses query failed, using seed data:', error.message);
+        return;
+      }
+      const rows = (data ?? []) as DbCourse[];
+      setCourses(rows.map(toUiCourse));
+      setVersions(Object.fromEntries(rows.map((row) => [row.id, row.updated_at ?? row.id])));
+    }
+    void load();
+
+    const onFocus = () => { void load(); };
+    window.addEventListener('focus', onFocus);
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    const onCoursesUpdated = () => { void load(); };
+    window.addEventListener('loknath-courses-updated', onCoursesUpdated);
+
+    const channel = supabase
+      .channel('courses-public')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'courses' },
+        () => { void load(); }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('loknath-courses-updated', onCoursesUpdated);
+      void supabase.removeChannel(channel);
+    };
+  }, []);
 
   return (
     <section id="courses" className="relative section-pad">
@@ -29,7 +129,7 @@ export function Courses() {
               ১৫টি কোর্স।<br/> <span className="brush-underline">একটি</span> সৃজনশীল যাত্রা।
             </>
           }
-          description="বেসিক ড্রয়িং থেকে শুরু করে প্রোফেসনাল ফাইন আর্টস পর্যন্ত — প্রতিটি বয়স, স্তর ও স্বপ্নের জন্য উপযুক্ত ক্লাস।"
+          description="বেসিক ড্রয়িং থেকে শুরু করে প্রোফেশনাল ফাইন আর্টস পর্যন্ত — প্রতিটি বয়স, স্তর ও স্বপ্নের জন্য উপযুক্ত ক্লাস।"
         />
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -44,19 +144,25 @@ export function Courses() {
               onClick={() => setSelectedCourse(c)}
               className="group relative cursor-pointer overflow-hidden rounded-3xl border border-white/60 bg-white/80 shadow-lg shadow-ink-500/5 backdrop-blur-sm transition-all hover:shadow-2xl"
             >
-              {/* Image */}
               <div className="relative h-48 overflow-hidden">
                 <img
-                  src={c.image}
+                  src={withCacheBust(c.image, versions[c.id])}
                   alt={c.titleBn}
                   className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    if (img.dataset.fallback !== '1') {
+                      img.dataset.fallback = '1';
+                      img.src = '/logo.png';
+                    }
+                  }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink-500/60 via-transparent to-transparent" />
                 <div
                   className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold backdrop-blur-sm"
                   style={{ color: c.color }}
                 >
-                  {c.level}
+                  {t(c.level)}
                 </div>
                 <div
                   className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full"
@@ -66,27 +172,26 @@ export function Courses() {
                 </div>
               </div>
 
-              {/* Body */}
               <div className="p-6">
                 <h3 className="font-display text-xl font-bold text-ink-500">
-                  {c.titleBn}
+                  {t(c.displayTitle)}
                 </h3>
                 <p className="mt-3 text-sm leading-relaxed text-ink-400 line-clamp-2">
-                  {c.description}
+                  {t(c.description)}
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2 text-xs">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-ink-50 px-3 py-1 text-ink-500">
-                    <Users className="h-3 w-3" /> {c.ageGroup}
+                    <Users className="h-3 w-3" /> {t(c.ageGroup)}
                   </span>
                   <span
                     className="inline-flex items-center gap-1.5 rounded-full px-3 py-1"
                     style={{
-                      background: `${levelColors[c.level]}15`,
-                      color: levelColors[c.level],
+                      background: `${LEVEL_COLORS_BN[c.level.bn]}15`,
+                      color: LEVEL_COLORS_BN[c.level.bn],
                     }}
                   >
-                    {c.level}
+                    {t(c.level)}
                   </span>
                 </div>
 
@@ -116,7 +221,6 @@ export function Courses() {
         <BrushDivider color="#FF6B35" className="mt-16" />
       </div>
 
-      {/* Course Detail Modal */}
       <AnimatePresence>
         {selectedCourse && (
           <motion.div
@@ -133,7 +237,6 @@ export function Courses() {
               onClick={(e) => e.stopPropagation()}
               className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl bg-white"
             >
-              {/* Close Button */}
               <button
                 onClick={() => setSelectedCourse(null)}
                 className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-lg transition hover:bg-white"
@@ -142,17 +245,22 @@ export function Courses() {
               </button>
 
               <div className="flex flex-col lg:flex-row">
-                {/* Full Image */}
                 <div className="relative w-full lg:w-1/2">
                   <img
-                    src={selectedCourse.image}
+                    src={withCacheBust(selectedCourse.image, versions[selectedCourse.id])}
                     alt={selectedCourse.titleBn}
                     className="h-full w-full object-cover"
                     style={{ height: '100%', minHeight: '300px' }}
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      if (img.dataset.fallback !== '1') {
+                        img.dataset.fallback = '1';
+                        img.src = '/logo.png';
+                      }
+                    }}
                   />
                 </div>
 
-                {/* Course Details */}
                 <div className="flex w-full flex-col justify-center p-8 lg:w-1/2">
                   <div
                     className="inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-sm font-medium"
@@ -162,30 +270,30 @@ export function Courses() {
                     }}
                   >
                     <BookOpen className="h-4 w-4" />
-                    {selectedCourse.category}
+                    {t(selectedCourse.category)}
                   </div>
 
                   <h2 className="mt-4 font-display text-3xl font-bold text-ink-500">
-                    {selectedCourse.titleBn}
+                    {t(selectedCourse.displayTitle)}
                   </h2>
 
                   <p className="mt-4 text-lg leading-relaxed text-ink-400">
-                    {selectedCourse.description}
+                    {t(selectedCourse.description)}
                   </p>
 
                   <div className="mt-6 flex flex-wrap gap-4">
                     <div className="flex items-center gap-2 rounded-full bg-ink-50 px-4 py-2">
                       <Users className="h-5 w-5 text-palette-orange" />
-                      <span className="font-medium text-ink-500">{selectedCourse.ageGroup}</span>
+                      <span className="font-medium text-ink-500">{t(selectedCourse.ageGroup)}</span>
                     </div>
                     <div
                       className="flex items-center gap-2 rounded-full px-4 py-2"
                       style={{
-                        background: `${levelColors[selectedCourse.level]}15`,
-                        color: levelColors[selectedCourse.level],
+                        background: `${LEVEL_COLORS_BN[selectedCourse.level.bn]}15`,
+                        color: LEVEL_COLORS_BN[selectedCourse.level.bn],
                       }}
                     >
-                      <span className="font-medium">{selectedCourse.level}</span>
+                      <span className="font-medium">{t(selectedCourse.level)}</span>
                     </div>
                   </div>
 

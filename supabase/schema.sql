@@ -62,6 +62,25 @@ create table if not exists public.income_report (
   amount numeric not null, description text, reference_id text, payment_method text, payment_status text not null default 'Completed', income_date date not null, created_at timestamptz not null default now()
 );
 
+create table if not exists public.courses (
+  id text primary key,
+  title text not null,
+  title_bn text not null,
+  title_en text not null,
+  duration text not null,
+  age_group text not null,
+  level text not null check (level in ('শুরু','মধ্যম','উচ্চ','সকল স্তর')),
+  description text not null,
+  image text,
+  color text not null default '#8B5CF6',
+  category text not null,
+  fee numeric,
+  display_order integer not null default 0,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Existing-project compatibility columns.
 alter table public.store_orders add column if not exists account_id uuid references auth.users(id) on delete set null;
 alter table public.store_orders add column if not exists updated_at timestamptz not null default now();
@@ -92,6 +111,8 @@ drop trigger if exists update_cart_items_updated_at on public.cart_items;
 create trigger update_cart_items_updated_at before update on public.cart_items for each row execute function public.update_updated_at();
 drop trigger if exists update_profiles_updated_at on public.profiles;
 create trigger update_profiles_updated_at before update on public.profiles for each row execute function public.update_updated_at();
+drop trigger if exists update_courses_updated_at on public.courses;
+create trigger update_courses_updated_at before update on public.courses for each row execute function public.update_updated_at();
 
 create index if not exists idx_store_orders_account_id on public.store_orders(account_id);
 create index if not exists idx_store_orders_created_at on public.store_orders(created_at desc);
@@ -101,6 +122,9 @@ create index if not exists idx_products_category on public.products(category);
 create index if not exists idx_products_is_active on public.products(is_active);
 create index if not exists idx_income_report_date on public.income_report(income_date desc);
 create index if not exists idx_students_status on public.students(status);
+create index if not exists idx_courses_is_active on public.courses(is_active);
+create index if not exists idx_courses_category on public.courses(category);
+create index if not exists idx_courses_display_order on public.courses(display_order);
 
 alter table public.accounts enable row level security;
 alter table public.products enable row level security;
@@ -112,36 +136,57 @@ alter table public.cart_items enable row level security;
 alter table public.wishlists enable row level security;
 alter table public.profiles enable row level security;
 alter table public.income_report enable row level security;
+alter table public.courses enable row level security;
+
+-- Role lives in public.accounts, not in the JWT. Helper reads it once and
+-- every policy below can call is_admin() so the source of truth is a single
+-- place. SECURITY DEFINER + search_path pin avoids search-path hijacking.
+create or replace function public.is_admin() returns boolean
+  language sql
+  security definer
+  set search_path = public
+  stable
+as $$
+  select coalesce(
+    (select role = 'admin' from public.accounts where id = auth.uid()),
+    false
+  );
+$$;
+grant execute on function public.is_admin() to anon, authenticated;
 
 drop policy if exists "Accounts owner access" on public.accounts;
 create policy "Accounts owner access" on public.accounts for all to authenticated using (id = auth.uid()) with check (id = auth.uid());
 drop policy if exists "Products public read" on public.products;
 create policy "Products public read" on public.products for select to anon, authenticated using (true);
 drop policy if exists "Products admin write" on public.products;
-create policy "Products admin write" on public.products for all to authenticated using (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin') with check (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+create policy "Products admin write" on public.products for all to authenticated using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "Students authenticated read" on public.students;
 create policy "Students authenticated read" on public.students for select to authenticated using (true);
 drop policy if exists "Students admin write" on public.students;
-create policy "Students admin write" on public.students for all to authenticated using (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin') with check (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+create policy "Students admin write" on public.students for all to authenticated using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "Store orders owner or admin read" on public.store_orders;
-create policy "Store orders owner or admin read" on public.store_orders for select to authenticated using (account_id = auth.uid() or auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+create policy "Store orders owner or admin read" on public.store_orders for select to authenticated using (account_id = auth.uid() or public.is_admin());
 drop policy if exists "Store orders owner create" on public.store_orders;
 create policy "Store orders owner create" on public.store_orders for insert to authenticated with check (account_id = auth.uid());
 drop policy if exists "Store orders owner or admin update" on public.store_orders;
-create policy "Store orders owner or admin update" on public.store_orders for update to authenticated using (account_id = auth.uid() or auth.jwt() -> 'user_metadata' ->> 'role' = 'admin') with check (account_id = auth.uid() or auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+create policy "Store orders owner or admin update" on public.store_orders for update to authenticated using (account_id = auth.uid() or public.is_admin()) with check (account_id = auth.uid() or public.is_admin());
 drop policy if exists "Purchases owner or admin read" on public.purchases;
-create policy "Purchases owner or admin read" on public.purchases for select to authenticated using (account_id = auth.uid() or auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+create policy "Purchases owner or admin read" on public.purchases for select to authenticated using (account_id = auth.uid() or public.is_admin());
 drop policy if exists "Purchases owner create" on public.purchases;
 create policy "Purchases owner create" on public.purchases for insert to authenticated with check (account_id = auth.uid());
 drop policy if exists "Reports admin access" on public.reports;
-create policy "Reports admin access" on public.reports for all to authenticated using (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin') with check (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+create policy "Reports admin access" on public.reports for all to authenticated using (public.is_admin()) with check (public.is_admin());
 drop policy if exists "Cart owner access" on public.cart_items;
 create policy "Cart owner access" on public.cart_items for all to authenticated using (account_id = auth.uid()) with check (account_id = auth.uid());
 drop policy if exists "Wishlist owner access" on public.wishlists;
 create policy "Wishlist owner access" on public.wishlists for all to authenticated using (account_id = auth.uid()) with check (account_id = auth.uid());
 drop policy if exists "Profiles owner or admin read" on public.profiles;
-create policy "Profiles owner or admin read" on public.profiles for select to authenticated using (user_id = auth.uid() or auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+create policy "Profiles owner or admin read" on public.profiles for select to authenticated using (user_id = auth.uid() or public.is_admin());
 drop policy if exists "Profiles owner write" on public.profiles;
 create policy "Profiles owner write" on public.profiles for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 drop policy if exists "Income admin access" on public.income_report;
-create policy "Income admin access" on public.income_report for all to authenticated using (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin') with check (auth.jwt() -> 'user_metadata' ->> 'role' = 'admin');
+create policy "Income admin access" on public.income_report for all to authenticated using (public.is_admin()) with check (public.is_admin());
+drop policy if exists "Courses public read" on public.courses;
+create policy "Courses public read" on public.courses for select to anon, authenticated using (true);
+drop policy if exists "Courses admin write" on public.courses;
+create policy "Courses admin write" on public.courses for all to authenticated using (public.is_admin()) with check (public.is_admin());

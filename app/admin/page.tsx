@@ -12,9 +12,9 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase/client';
 import { AdminOrdersPanel } from '@/components/admin-orders-panel';
 import { AdminReports } from '@/components/admin-reports';
-
+import { showToast } from '@/components/ui/toaster';
 type Order = { id: string; total: number; createdAt: string; status: string; deliveryDate?: string; adminMessage?: string; items: Array<{ id: string; name: string; price: number; image: string; quantity: number }>; customer: { name: string; email: string; phone: string; address: string; city: string; pincode: string; notes?: string }; paymentMethod: string; paymentStatus: string; paymentReference?: string };
-type Course = { id: string; title: string; duration: string; fee: number; description: string; image: string };
+type Course = { id: string; title: string; duration: string; fee: number; description: string; image: string; isActive: boolean; displayOrder: number };
 type Event = { id: string; title: string; date: string; details: string };
 type Student = { id: string; name: string; village: string; phone: string; course: string; monthlyFee: number; paidMonths: string[] };
 type Blog = { id: string; title: string; category: string; content: string; image: string; date: string };
@@ -56,6 +56,56 @@ function AdminDashboard({ user }: { user: { id: string; name: string; email: str
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrdersPanel, setShowOrdersPanel] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
+  useEffect(() => {
+    const refreshCourses = async () => {
+      let data, error;
+      try {
+        ({ data, error } = await supabase
+          .from('courses')
+          .select('id, title, duration, fee, description, image, is_active, display_order'));
+      } catch (thrown) {
+        // Supabase JS sometimes throws (network/CORS/Auth) instead of returning
+        // an error object. Convert the throw into a normalized shape so the
+        // rest of the handler treats both paths the same way.
+        const message = thrown instanceof Error ? thrown.message : String(thrown);
+        console.error('Courses load threw:', thrown);
+        showToast({ title: 'কোর্স লোড ব্যর্থ', description: message || 'অনুগ্রহ করে আবার চেষ্টা করুন', variant: 'destructive' });
+        return;
+      }
+      if (error) {
+        // PostgrestError's enumerable properties can be empty when the real
+        // failure is an Auth/CORS/network issue. Coalesce to a printable form.
+        const description = error.message || error.hint || error.details || error.code || 'অনুগ্রহ করে আবার চেষ্টা করুন';
+        console.error('Courses load failed:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+          raw: error,
+          stringified: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+        });
+        showToast({ title: 'কোর্স লোড ব্যর্থ', description, variant: 'destructive' });
+        return;
+      }
+      setCourses((data ?? []).map((row) => ({
+        id: row.id,
+        title: row.title ?? '',
+        duration: row.duration ?? '',
+        fee: row.fee ? Number(row.fee) : 0,
+        description: row.description ?? '',
+        image: row.image ?? emptyImage,
+        isActive: row.is_active ?? true,
+        displayOrder: row.display_order ?? 0,
+      })));
+    };
+    void refreshCourses();
+    const refreshInterval = window.setInterval(refreshCourses, 15000);
+    window.addEventListener('focus', refreshCourses);
+    return () => {
+      window.removeEventListener('focus', refreshCourses);
+      window.clearInterval(refreshInterval);
+    };
+  }, []);
   const [events, setEvents] = useState<Event[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -91,7 +141,7 @@ function AdminDashboard({ user }: { user: { id: string; name: string; email: str
       <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest"><Sparkles className="h-3 w-3" />Admin Dashboard</div>
       <h1 className="mt-4 font-display text-4xl font-bold md:text-5xl">স্বাগতম, {user.name}!</h1><p className="mt-2 text-white/85">{user.email}</p>
     </motion.div>
-    <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{[['মোট ছাত্র-ছাত্রী', students.length, '#FF6B35'], ['সক্রিয় কোর্স', courses.length, '#8B5CF6'], ['মোট অর্ডার', orders.length, '#FF5C8A'], ['মোট আয়', money(income), '#10B981']].map(([label, value, color]) => <div key={String(label)} className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><div className="text-sm text-ink-400">{label}</div><div className="mt-2 font-display text-3xl font-bold" style={{ color: String(color) }}>{value}</div></div>)}</div>
+    <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{[['মোট ছাত্র-ছাত্রী', students.length, '#FF6B35'], ['সক্রিয় কোর্স', courses.filter((course) => course.isActive).length, '#8B5CF6'], ['মোট অর্ডার', orders.length, '#FF5C8A'], ['মোট আয়', money(income), '#10B981']].map(([label, value, color]) => <div key={String(label)} className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><div className="text-sm text-ink-400">{label}</div><div className="mt-2 font-display text-3xl font-bold" style={{ color: String(color) }}>{value}</div></div>)}</div>
     <button onClick={() => setShowOrdersPanel(true)} className="mt-8 inline-flex items-center rounded-full bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-palette-purple">সাম্প্রতিক অর্ডার দেখুন</button>
     <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
       <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><h2 className="font-display text-2xl font-bold text-ink-500">দ্রুত অ্যাকশন</h2><div className="mt-4 grid grid-cols-2 gap-3">{actions.map(({ key, label, icon: Icon }) => <button key={key} onClick={() => setActive(key)} className="rounded-2xl bg-gradient-to-br from-cream-200 to-white p-4 text-left text-sm font-bold text-ink-500 transition hover:-translate-y-0.5 hover:shadow-md"><Icon className="mb-2 h-5 w-5 text-palette-purple" />{label}</button>)}</div><Link href="/" className="mt-6 inline-flex text-sm font-semibold text-palette-purple hover:underline">← হোমে ফিরে যান</Link></div>
@@ -107,16 +157,21 @@ function AdminDashboard({ user }: { user: { id: string; name: string; email: str
     </section>
     <div className="mt-6 grid gap-5 sm:grid-cols-2"><div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-lg"><p className="text-sm font-semibold text-emerald-700">Total Income</p><p className="mt-2 font-display text-3xl font-bold text-emerald-800">{money(income)}</p><p className="mt-1 text-xs text-emerald-700">Student fees, confirmed online payments, and delivered COD.</p></div><div className="rounded-3xl border border-amber-100 bg-amber-50 p-6 shadow-lg"><p className="text-sm font-semibold text-amber-700">Pending Income</p><p className="mt-2 font-display text-3xl font-bold text-amber-800">{money(pendingIncome)}</p><p className="mt-1 text-xs text-amber-700">Cash on Delivery orders not yet delivered.</p></div></div>
     {showOrdersPanel && <AdminOrdersPanel orders={orders} selectedOrder={selectedOrder} onSelect={setSelectedOrder} onUpdate={(next) => { setOrders((current) => current.map((order) => order.id === next.id ? next : order)); setSelectedOrder(next); }} onClose={() => { setShowOrdersPanel(false); setSelectedOrder(null); }} />}
-    {active === 'course' && <CoursePanel courses={courses} setCourses={setCourses} />}
-    {active === 'event' && <EventPanel events={events} setEvents={setEvents} />}
-    {active === 'student' && <StudentPanel students={students} setStudents={setStudents} />}
-    {active === 'blog' && <BlogPanel blogs={blogs} setBlogs={setBlogs} />}
-    {active === 'product' && <ProductPanel />}
-    {active === 'report' && <AdminReports />}
-    {active === 'settings' && <SettingsPanel userId={user.id} />}
-    {active === 'student_details' && <StudentDetailsPanel />}
-    {active === 'income_report' && <IncomeReportPanel />}
-    {active && <button onClick={() => setActive(null)} className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-ink-400"><X className="h-4 w-4" /> প্যানেল বন্ধ করুন</button>}
+
+    <Dialog open={active !== null} onOpenChange={(open) => { if (!open) setActive(null); }}>
+      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+        {active === 'course' && <CoursePanel courses={courses} setCourses={setCourses} />}
+        {active === 'event' && <EventPanel events={events} setEvents={setEvents} />}
+        {active === 'student' && <StudentPanel students={students} setStudents={setStudents} />}
+        {active === 'blog' && <BlogPanel blogs={blogs} setBlogs={setBlogs} />}
+        {active === 'product' && <ProductPanel />}
+        {active === 'report' && <AdminReports />}
+        {active === 'settings' && <SettingsPanel userId={user.id} />}
+        {active === 'student_details' && <StudentDetailsPanel />}
+        {active === 'income_report' && <IncomeReportPanel />}
+      </DialogContent>
+    </Dialog>
+
     {false && <OrderDialog order={selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)} onUpdate={(next) => { setOrders((current) => current.map((order) => order.id === next.id ? next : order)); setSelectedOrder(next); }} />}
   </div>;
 }
@@ -141,19 +196,399 @@ function OrderDialog({ order, onOpenChange, onUpdate }: { order: Order | null; o
   return <Dialog open={Boolean(order)} onOpenChange={onOpenChange}><DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto"><DialogTitle>অর্ডার বিস্তারিত · {order.id}</DialogTitle><div className="grid gap-6 md:grid-cols-2"><div><h3 className="font-bold text-ink-500">পণ্যের বিবরণ</h3><div className="mt-3 space-y-3">{order.items.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-ink-50 p-3"><img src={item.image} alt={item.name} className="h-14 w-14 rounded-xl object-cover" /><div className="flex-1"><b>{item.name}</b><p className="text-sm text-ink-400">{item.quantity} × {money(item.price)}</p></div><b>{money(item.price * item.quantity)}</b></div>)}</div><p className="mt-4 font-display text-2xl font-bold text-palette-orange">মোট: {money(order.total)}</p></div><div className="rounded-2xl bg-ink-50 p-4 text-sm text-ink-500"><h3 className="font-bold">গ্রাহকের বিবরণ</h3><p className="mt-3"><b>নাম:</b> {order.customer.name}</p><p><b>ফোন:</b> {order.customer.phone}</p><p><b>ইমেল:</b> {order.customer.email}</p><p><b>ঠিকানা:</b> {order.customer.address}, {order.customer.city} - {order.customer.pincode}</p><p><b>অর্ডারের তারিখ:</b> {new Date(order.createdAt).toLocaleString('en-IN')}</p><p><b>পেমেন্ট:</b> {order.paymentMethod} · {order.paymentStatus}</p>{order.customer.notes && <p><b>নোট:</b> {order.customer.notes}</p>}</div></div><div className="rounded-2xl border border-ink-100 p-4"><label className="font-bold text-ink-500">ডেলিভারির তারিখ</label><div className="mt-2 flex flex-wrap gap-3"><Input type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} className="max-w-xs" /><Button onClick={confirm} disabled={order.status === 'Cancelled'}>অর্ডার নিশ্চিত করুন</Button><Button variant="outline" onClick={cancel} disabled={order.status === 'Cancelled'}>অর্ডার বাতিল করুন</Button></div><p className="mt-3 text-sm font-semibold text-ink-400">বর্তমান অবস্থা: {order.status}{order.adminMessage ? ` · ${order.adminMessage}` : ''}</p></div></DialogContent></Dialog>;
 }
 
-const Panel = ({ title, children }: { title: string; children: React.ReactNode }) => <section className="mt-8 rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><h2 className="font-display text-2xl font-bold text-ink-500">{title}</h2>{children}</section>;
-const ImageField = ({ onChange }: { onChange: (image: string) => void }) => <input aria-label="Upload image" type="file" accept="image/*" onChange={(event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; if (file) { const reader = new FileReader(); reader.onload = () => onChange(String(reader.result)); reader.readAsDataURL(file); } }} className="block w-full text-sm text-ink-400 file:mr-4 file:rounded-full file:border-0 file:bg-palette-purple/10 file:px-4 file:py-2 file:font-semibold file:text-palette-purple" />;
+const readError = (err: unknown): { message: string; code?: string; details?: string; hint?: string; status?: number } => {
+  // Supabase JS attaches PostgrestError props (message, code, details, hint)
+  // as non-enumerable own properties on the prototype in some versions, so
+  // plain property access returns undefined and JSON.stringify yields `{}`.
+  // Walk both the own keys (enumerable + non-enumerable) and the prototype
+  // chain to extract whatever the SDK actually attached.
+  if (!err) return { message: 'Unknown error' };
+  if (typeof err === 'string') return { message: err };
 
-function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (items: Course[]) => void }) { const [editing, setEditing] = useState<Course | null>(null); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const course: Course = { id: editing?.id || id(), title: String(data.title), duration: String(data.duration), fee: Number(data.fee), description: String(data.description), image: editing?.image || emptyImage }; setCourses(editing ? courses.map(item => item.id === course.id ? course : item) : [...courses, course]); setEditing(null); event.currentTarget.reset(); }; return <Panel title="কোর্স পরিচালনা"><form key={editing?.id || 'new'} onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder="কোর্সের নাম" required /><Input name="duration" defaultValue={editing?.duration} placeholder="সময়কাল" required /><Input name="fee" type="number" defaultValue={editing?.fee} placeholder="মাসিক ফি" required /><ImageField onChange={image => setEditing(current => ({ ...(current || { id: '', title: '', duration: '', fee: 0, description: '' }), image }))} /><Textarea name="description" defaultValue={editing?.description} placeholder="কোর্সের বিস্তারিত" className="md:col-span-2" required /><Button type="submit">{editing ? 'কোর্স আপডেট করুন' : 'নতুন কোর্স সংরক্ষণ করুন'}</Button></form><ItemGrid items={courses} empty="কোনো কোর্স যোগ করা হয়নি।" render={course => <><img src={course.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{course.title}</b><p className="text-sm text-ink-400">{course.duration} · {money(course.fee)}</p><p className="text-sm text-ink-400">{course.description}</p></div><button onClick={() => setEditing(course)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>; }
+  const out: Record<string, unknown> = {};
+  const collect = (obj: object) => {
+    for (const key of Object.getOwnPropertyNames(obj)) {
+      if (out[key] === undefined) {
+        const value = (obj as Record<string, unknown>)[key];
+        if (value !== undefined && typeof value !== 'function') out[key] = value;
+      }
+    }
+  };
+  let cursor: object | null = err as object;
+  while (cursor && cursor !== Object.prototype) {
+    collect(cursor);
+    cursor = Object.getPrototypeOf(cursor);
+  }
+  const message =
+    (out.message as string | undefined) ||
+    (out.error_description as string | undefined) ||
+    (out.msg as string | undefined) ||
+    (err instanceof Error ? err.message : '') ||
+    JSON.stringify(err) ||
+    'Unknown error';
+  return {
+    message,
+    code: out.code as string | undefined,
+    details: out.details as string | undefined,
+    hint: out.hint as string | undefined,
+    status: out.status as number | undefined,
+  };
+};
+
+const Panel = ({ title, children }: { title: string; children: React.ReactNode }) => <section className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><DialogTitle className="font-display text-2xl font-bold text-ink-500">{title}</DialogTitle>{children}</section>;
+const ImageField = ({ value, onChange }: { value?: string; onChange: (image: string) => void }) => (
+  <div className="flex items-center gap-3">
+    {value && (
+      <img
+        src={value}
+        alt="current"
+        className="h-14 w-14 rounded-xl object-cover ring-1 ring-ink-100"
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+      />
+    )}
+    <input
+      aria-label="Upload image"
+      type="file"
+      accept="image/*"
+      onChange={(event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => onChange(String(reader.result));
+          reader.readAsDataURL(file);
+        }
+      }}
+      className="block w-full text-sm text-ink-400 file:mr-4 file:rounded-full file:border-0 file:bg-palette-purple/10 file:px-4 file:py-2 file:font-semibold file:text-palette-purple"
+    />
+  </div>
+);
+
+function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (items: Course[]) => void }) {
+  const [editing, setEditing] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Separate the image draft from `editing` so picking a file before clicking
+  // "Update" doesn't depend on `editing` being set, and so the FileReader's
+  // async onload can't overwrite the wrong row.
+  const [imageDraft, setImageDraft] = useState<string>(emptyImage);
+
+  const loadCourses = async () => {
+    setLoading(true);
+    setError(null);
+    let data: unknown[] | null = null;
+    let error: unknown = null;
+    try {
+      ({ data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .order('display_order', { ascending: true }));
+    } catch (thrown) {
+      const { message } = readError(thrown);
+      console.error('Courses load threw:', thrown);
+      setError(message || 'কোর্স লোড ব্যর্থ');
+      setLoading(false);
+      return;
+    }
+    if (error) {
+      const r = readError(error);
+      console.error('Courses load failed:', { ...r, raw: error });
+      setError(r.message || 'কোর্স লোড ব্যর্থ');
+      setLoading(false);
+      return;
+    }
+    const mapped: Course[] = ((data ?? []) as Array<{
+      id: string;
+      title?: string | null;
+      duration?: string | null;
+      fee?: number | string | null;
+      description?: string | null;
+      image?: string | null;
+      is_active?: boolean | null;
+      display_order?: number | null;
+    }>).map((row) => ({
+      id: row.id,
+      title: row.title ?? '',
+      duration: row.duration ?? '',
+      fee: row.fee ? Number(row.fee) : 0,
+      description: row.description ?? '',
+      image: row.image ?? emptyImage,
+      isActive: row.is_active ?? true,
+      displayOrder: row.display_order ?? 0,
+    }));
+    setCourses(mapped);
+    setLoading(false);
+  };
+
+  useEffect(() => { void loadCourses(); }, []);
+
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    setSaving(true);
+    setError(null);
+    // Same diagnostic as toggleActive — if is_admin() returns false, RLS
+    // silently filters the UPDATE/INSERT to 0 rows and the user sees
+    // `{}` instead of a permission error.
+    try {
+      const probe = await supabase.rpc('is_admin');
+      console.log('[save] is_admin() =>', probe);
+    } catch (probeErr) {
+      console.warn('[save] is_admin probe failed:', probeErr);
+    }
+    const data = Object.fromEntries(new FormData(form));
+    const nextOrder = editing
+      ? editing.displayOrder
+      : (courses.length ? Math.max(...courses.map((c) => c.displayOrder)) + 1 : 1);
+    const row = {
+      id: editing?.id || id(),
+      title: String(data.title),
+      title_bn: String(data.title),
+      title_en: String(data.title),
+      duration: String(data.duration),
+      age_group: 'সকল স্তর',
+      level: 'সকল স্তর',
+      description: String(data.description),
+      // Prefer the freshly-picked image, then the row being edited, then the
+      // seed fallback. Previously this used `editing?.image` only, which
+      // meant picking a file in "new course" mode silently dropped the image.
+      image: imageDraft || editing?.image || emptyImage,
+      color: '#8B5CF6',
+      category: 'General',
+      fee: Number(data.fee) || 0,
+      display_order: nextOrder,
+      is_active: editing?.isActive ?? true,
+    };
+    const query = editing
+      ? supabase.from('courses').update(row).eq('id', row.id)
+      : supabase.from('courses').insert(row);
+    let saveError: unknown = null;
+    try {
+      ({ error: saveError } = await query);
+    } catch (thrown) {
+      const { message } = readError(thrown);
+      setSaving(false);
+      console.error('Save course threw:', thrown);
+      setError(message || 'সংরক্ষণ ব্যর্থ');
+      showToast({ title: 'সংরক্ষণ ব্যর্থ', description: message || 'কোর্স সংরক্ষণ করা যায়নি।', variant: 'destructive' });
+      return;
+    }
+    setSaving(false);
+    if (saveError) {
+      const r = readError(saveError);
+      const description = r.message || JSON.stringify(r) || 'সংরক্ষণ ব্যর্থ';
+      console.error('Save course failed:', { ...r, raw: saveError });
+      setError(description);
+      showToast({ title: 'সংরক্ষণ ব্যর্থ', description, variant: 'destructive' });
+      return;
+    }
+    // Reset the form BEFORE clearing `editing` — the form is keyed by
+    // `editing?.id || 'new'`, so flipping editing to null unmounts it and
+    // event.currentTarget would resolve to null on the next render.
+    form.reset();
+    setImageDraft(emptyImage);
+    setEditing(null);
+    await loadCourses();
+    // Notify any other tabs (e.g. the public site) that courses just changed.
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('loknath-courses-updated'));
+    }
+    showToast({ title: editing ? 'কোর্স আপডেট হয়েছে' : 'নতুন কোর্স যোগ হয়েছে', variant: 'success' });
+  };
+
+  const toggleActive = async (course: Course) => {
+    // Optimistic update — flip locally so the UI responds instantly, then
+    // reconcile with the server once the round-trip completes.
+    const nextActive = !course.isActive;
+    setCourses(courses.map((c) => (c.id === course.id ? { ...c, isActive: nextActive } : c)));
+    setError(null);
+    let updateError: unknown = null;
+    let data: { is_active?: boolean } | null = null;
+
+    // One-time diagnostic so we can see exactly what RLS is reporting for the
+    // signed-in user. If `is_admin` returns false, RLS silently filters the
+    // UPDATE to 0 rows — which is exactly what the user is seeing.
+    try {
+      const probe = await supabase.rpc('is_admin');
+      console.log('[toggleActive] is_admin() =>', probe);
+    } catch (probeErr) {
+      console.warn('[toggleActive] is_admin probe failed:', probeErr);
+    }
+    try {
+      // Avoid `.single()` here — it wraps the response as a single-object
+      // (Accept: ...vnd.pgrst.object+json). When the UPDATE matches 0 rows
+      // (e.g. RLS denies silently), PostgREST returns 406 + PGRST116 instead
+      // of the actual policy error. Using `maybeSingle()` gives us the same
+      // single-row shape without coercing into 406, and let us inspect the
+      // matched-row count directly via the response headers.
+      ({ data, error: updateError } = await supabase
+        .from('courses')
+        .update({ is_active: nextActive })
+        .eq('id', course.id)
+        .select('id, is_active')
+        .maybeSingle());
+    } catch (thrown) {
+      // Network/CORS failures never produce a PostgrestError — the SDK
+      // throws directly. Surface the real message instead of `{}`.
+      const { message } = readError(thrown);
+      setCourses(courses.map((c) => (c.id === course.id ? { ...c, isActive: course.isActive } : c)));
+      console.error('Toggle active threw:', thrown);
+      setError(message || 'Toggle failed');
+      showToast({ title: 'Toggle failed', description: message || 'Unable to update course visibility.', variant: 'destructive' });
+      return;
+    }
+    if (updateError) {
+      // Empty `{message, code, details, hint}` is RLS / auth / network.
+      // Use the reflective reader so non-enumerable props still surface.
+      const r = readError(updateError);
+      const description = r.message || JSON.stringify(r) || 'Toggle failed';
+      setCourses(courses.map((c) => (c.id === course.id ? { ...c, isActive: course.isActive } : c)));
+      console.error('Toggle active failed:', { ...r, raw: updateError });
+      setError(description);
+      showToast({ title: 'Toggle failed', description, variant: 'destructive' });
+      return;
+    }
+    // Trust the server's value over the optimistic one in case RLS or a
+    // trigger changed it.
+    if (data?.is_active !== undefined && data.is_active !== nextActive) {
+      setCourses(courses.map((c) => (c.id === course.id ? { ...c, isActive: Boolean(data.is_active) } : c)));
+    }
+    showToast({ title: nextActive ? 'কোর্স দৃশ্যমান করা হয়েছে' : 'কোর্স লুকানো হয়েছে', variant: 'success' });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('loknath-courses-updated'));
+    }
+  };
+
+  const remove = async (courseId: string) => {
+    if (!confirm('এই কোর্সটি মুছে ফেলতে চান?')) return;
+    // Optimistic remove so the row disappears immediately.
+    const previous = courses;
+    setCourses(courses.filter((c) => c.id !== courseId));
+    setError(null);
+    let deleteError: unknown = null;
+    try {
+      ({ error: deleteError } = await supabase.from('courses').delete().eq('id', courseId));
+    } catch (thrown) {
+      const { message } = readError(thrown);
+      setCourses(previous);
+      console.error('Delete threw:', thrown);
+      setError(message || 'Delete failed');
+      showToast({ title: 'মুছে ফেলা ব্যর্থ', description: message || 'Unable to delete this course.', variant: 'destructive' });
+      return;
+    }
+    if (deleteError) {
+      const r = readError(deleteError);
+      const description = r.message || JSON.stringify(r) || 'Delete failed';
+      setCourses(previous);
+      console.error('Delete failed:', { ...r, raw: deleteError });
+      setError(description);
+      showToast({ title: 'মুছে ফেলা ব্যর্থ', description, variant: 'destructive' });
+      return;
+    }
+    showToast({ title: 'কোর্স মুছে ফেলা হয়েছে', variant: 'success' });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('loknath-courses-updated'));
+    }
+  };
+
+  return (
+    <Panel title="কোর্স পরিচালনা">
+      {error && <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
+      <form
+        key={editing?.id || 'new'}
+        onSubmit={save}
+        className="mt-5 grid gap-3 md:grid-cols-2"
+      >
+        <Input name="title" defaultValue={editing?.title} placeholder="কোর্সের নাম" required />
+        <Input name="duration" defaultValue={editing?.duration} placeholder="সময়কাল" required />
+        <Input name="fee" type="number" defaultValue={editing?.fee} placeholder="মাসিক ফি" required />
+        <ImageField
+          value={imageDraft}
+          onChange={setImageDraft}
+        />
+        <Textarea
+          name="description"
+          defaultValue={editing?.description}
+          placeholder="কোর্সের বিস্তারিত"
+          className="md:col-span-2"
+          required
+        />
+        <div className="md:col-span-2 flex gap-2">
+          <Button type="submit" disabled={saving}>
+            {saving ? 'সংরক্ষণ হচ্ছে…' : editing ? 'কোর্স আপডেট করুন' : 'নতুন কোর্স সংরক্ষণ করুন'}
+          </Button>
+          {editing && (
+            <Button type="button" variant="outline" onClick={() => { setEditing(null); setImageDraft(emptyImage); }}>
+              বাতিল
+            </Button>
+          )}
+        </div>
+      </form>
+
+      {loading ? (
+        <div className="mt-6 flex justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-palette-purple border-t-transparent" />
+        </div>
+      ) : (
+        <ItemGrid
+          items={courses}
+          empty="কোনো কোর্স যোগ করা হয়নি।"
+          render={(course) => (
+            <>
+              <img
+                src={course.image}
+                alt=""
+                className="h-16 w-16 rounded-xl object-cover"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  if (img.dataset.fallback !== '1') {
+                    img.dataset.fallback = '1';
+                    img.src = emptyImage;
+                  }
+                }}
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <b>{course.title}</b>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${course.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {course.isActive ? 'ওয়েবসাইটে দেখাচ্ছে' : 'লুকানো'}
+                  </span>
+                </div>
+                <p className="text-sm text-ink-400">
+                  {course.duration} · {money(course.fee)}
+                </p>
+                <p className="text-sm text-ink-400">{course.description}</p>
+              </div>
+              <button
+                onClick={() => toggleActive(course)}
+                title={course.isActive ? 'ওয়েবসাইট থেকে লুকান' : 'ওয়েবসাইটে দেখান'}
+                aria-label={course.isActive ? 'লুকান' : 'দেখান'}
+                className={`flex h-9 w-16 items-center rounded-full px-1 transition ${course.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}
+              >
+                <span className={`inline-block h-7 w-7 transform rounded-full bg-white shadow transition ${course.isActive ? 'translate-x-7' : 'translate-x-0'}`} />
+              </button>
+              <button onClick={() => { setImageDraft(course.image); setEditing(course); }} aria-label="সম্পাদনা">
+                <Pencil className="h-4 w-4 text-palette-purple" />
+              </button>
+              <button onClick={() => remove(course.id)} aria-label="মুছুন">
+                <X className="h-4 w-4 text-rose-500" />
+              </button>
+            </>
+          )}
+        />
+      )}
+    </Panel>
+  );
+}
 function EventPanel({ events, setEvents }: { events: Event[]; setEvents: (items: Event[]) => void }) { const [editing, setEditing] = useState<Event | null>(null); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item = { id: editing?.id || id(), title: String(data.title), date: String(data.date), details: String(data.details) }; setEvents(editing ? events.map(value => value.id === item.id ? item : value) : [...events, item]); setEditing(null); event.currentTarget.reset(); }; return <Panel title="ইভেন্ট ও চলমান কোর্স পরিচালনা"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder="ইভেন্ট / কোর্সের নাম" required /><Input name="date" type="date" defaultValue={editing?.date} required /><Textarea name="details" defaultValue={editing?.details} placeholder="সময়, স্থান এবং বিস্তারিত" className="md:col-span-2" required /><Button type="submit">{editing ? 'আপডেট করুন' : 'ইভেন্ট যোগ করুন'}</Button></form><ItemGrid items={events} empty="কোনো ইভেন্ট নেই।" render={item => <><div className="flex-1"><b>{item.title}</b><p className="text-sm text-ink-400">{item.date} · {item.details}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>; }
 function StudentPanel({ students, setStudents }: { students: Student[]; setStudents: (items: Student[]) => void }) { const [village, setVillage] = useState(''); const [editing, setEditing] = useState<Student | null>(null); const filtered = students.filter(student => !village || student.village === village); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item: Student = { id: editing?.id || id(), name: String(data.name), village: String(data.village), phone: String(data.phone), course: String(data.course), monthlyFee: Number(data.monthlyFee), paidMonths: editing?.paidMonths || [] }; setStudents(editing ? students.map(value => value.id === item.id ? item : value) : [...students, item]); setEditing(null); event.currentTarget.reset(); }; const toggleFee = (student: Student, month: string) => setStudents(students.map(value => value.id === student.id ? { ...value, paidMonths: value.paidMonths.includes(month) ? value.paidMonths.filter(value => value !== month) : [...value.paidMonths, month] } : value)); return <Panel title="ছাত্র তালিকা ও মাসিক ফি"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-3"><Input name="name" defaultValue={editing?.name} placeholder="ছাত্রের নাম" required /><Input name="village" defaultValue={editing?.village} placeholder="গ্রাম" required /><Input name="phone" defaultValue={editing?.phone} placeholder="ফোন নম্বর" required /><Input name="course" defaultValue={editing?.course} placeholder="কোর্স" required /><Input name="monthlyFee" type="number" defaultValue={editing?.monthlyFee} placeholder="মাসিক ফি" required /><Button type="submit">{editing ? 'ছাত্র আপডেট করুন' : 'ছাত্র যোগ করুন'}</Button></form><select value={village} onChange={event => setVillage(event.target.value)} className="mt-5 h-11 rounded-xl border border-ink-200 bg-white px-3 text-sm text-ink-500"><option value="">সব গ্রাম</option>{[...new Set(students.map(student => student.village))].map(value => <option key={value}>{value}</option>)}</select><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead className="text-ink-400"><tr><th className="p-2">নাম</th><th>গ্রাম</th><th>কোর্স</th><th>মাসিক ফি</th><th>ফি নিশ্চিত করুন</th><th /></tr></thead><tbody>{filtered.map(student => <tr key={student.id} className="border-t border-ink-100"><td className="p-2 font-semibold">{student.name}<span className="block text-xs font-normal text-ink-400">{student.phone}</span></td><td>{student.village}</td><td>{student.course}</td><td>{money(student.monthlyFee)}</td><td><div className="flex gap-1">{months.map(month => <button title={`${month} fee`} onClick={() => toggleFee(student, month)} key={month} className={`rounded px-2 py-1 text-xs ${student.paidMonths.includes(month) ? 'bg-emerald-100 text-emerald-700' : 'bg-ink-100 text-ink-400'}`}>{month}</button>)}</div></td><td><button onClick={() => setEditing(student)}><Pencil className="h-4 w-4 text-palette-purple" /></button></td></tr>)}</tbody></table></div></Panel>; }
-function BlogPanel({ blogs, setBlogs }: { blogs: Blog[]; setBlogs: (items: Blog[]) => void }) { const [editing, setEditing] = useState<Blog | null>(null); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item: Blog = { id: editing?.id || id(), title: String(data.title), category: String(data.category), content: String(data.content), image: editing?.image || emptyImage, date: editing?.date || new Date().toLocaleDateString('en-GB') }; setBlogs(editing ? blogs.map(value => value.id === item.id ? item : value) : [item, ...blogs]); setEditing(null); event.currentTarget.reset(); }; return <Panel title="ব্লগ পোস্ট লিখুন ও সম্পাদনা করুন"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder="পোস্টের শিরোনাম" required /><Input name="category" defaultValue={editing?.category} placeholder="বিভাগ" required /><ImageField onChange={image => setEditing(current => ({ ...(current || { id: '', title: '', category: '', content: '', date: '' }), image }))} /><Textarea name="content" defaultValue={editing?.content} placeholder="ব্লগের লেখা" className="md:col-span-2" required /><Button type="submit">{editing ? 'পোস্ট আপডেট করুন' : 'পোস্ট প্রকাশ করুন'}</Button></form><ItemGrid items={blogs} empty="এখনও কোনো ব্লগ পোস্ট নেই।" render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.title}</b><p className="text-sm text-ink-400">{item.category} · {item.date}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>; }
+function BlogPanel({ blogs, setBlogs }: { blogs: Blog[]; setBlogs: (items: Blog[]) => void }) { const [editing, setEditing] = useState<Blog | null>(null); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item: Blog = { id: editing?.id || id(), title: String(data.title), category: String(data.category), content: String(data.content), image: editing?.image || emptyImage, date: editing?.date || new Date().toLocaleDateString('en-GB') }; setBlogs(editing ? blogs.map(value => value.id === item.id ? item : value) : [item, ...blogs]); setEditing(null); event.currentTarget.reset(); }; return <Panel title="ব্লগ পোস্ট লিখুন ও সম্পাদনা করুন"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder="পোস্টের শিরোনাম" required /><Input name="category" defaultValue={editing?.category} placeholder="বিভাগ" required /><ImageField value={editing?.image} onChange={image => setEditing(current => ({ ...(current || { id: '', title: '', category: '', content: '', date: '' }), image }))} /><Textarea name="content" defaultValue={editing?.content} placeholder="ব্লগের লেখা" className="md:col-span-2" required /><Button type="submit">{editing ? 'পোস্ট আপডেট করুন' : 'পোস্ট প্রকাশ করুন'}</Button></form><ItemGrid items={blogs} empty="এখনও কোনো ব্লগ পোস্ট নেই।" render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.title}</b><p className="text-sm text-ink-400">{item.category} · {item.date}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>; }
 function ProductPanel() {
   const [products, setProducts] = useState<Product[]>([]); const [editing, setEditing] = useState<Product | null>(null);
   const load = async () => { const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false }); if (error) { console.error(error); alert(error.message); return; } setProducts((data ?? []).map((p) => ({ id: p.id, name: p.name, category: p.category, price: Number(p.price), stock: p.stock ?? 0, image: p.image || emptyImage }))); };
   useEffect(() => { void load(); }, []);
   const save = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = Object.fromEntries(new FormData(event.currentTarget)); const item = { id: editing?.id || id(), name: String(form.name), category: String(form.category), price: Number(form.price), stock: Number(form.stock), image: editing?.image || emptyImage }; const query = editing ? supabase.from('products').update(item).eq('id', item.id).select() : supabase.from('products').insert(item).select(); const { error } = await query; if (error) { console.error(error); alert(error.message); throw error; } setEditing(null); event.currentTarget.reset(); await load(); };
-  return <Panel title="পণ্য ম্যানেজমেন্ট"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="name" defaultValue={editing?.name} placeholder="পণ্যের নাম" required /><Input name="category" defaultValue={editing?.category} placeholder="বিভাগ" required /><Input name="price" type="number" defaultValue={editing?.price} placeholder="মূল্য" required /><Input name="stock" type="number" defaultValue={editing?.stock} placeholder="স্টক" required /><ImageField onChange={image => setEditing(current => ({ ...(current || { id: '', name: '', category: '', price: 0, stock: 0 }), image }))} /><Button type="submit">{editing ? 'পণ্য আপডেট করুন' : 'পণ্য যোগ করুন'}</Button></form><ItemGrid items={products} empty="এখনও কোনো পণ্য যোগ করা হয়নি।" render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.name}</b><p className="text-sm text-ink-400">{item.category} · {money(item.price)} · স্টক {item.stock}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
+  return <Panel title="পণ্য ম্যানেজমেন্ট"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="name" defaultValue={editing?.name} placeholder="পণ্যের নাম" required /><Input name="category" defaultValue={editing?.category} placeholder="বিভাগ" required /><Input name="price" type="number" defaultValue={editing?.price} placeholder="মূল্য" required /><Input name="stock" type="number" defaultValue={editing?.stock} placeholder="স্টক" required /><ImageField value={editing?.image} onChange={image => setEditing(current => ({ ...(current || { id: '', name: '', category: '', price: 0, stock: 0 }), image }))} /><Button type="submit">{editing ? 'পণ্য আপডেট করুন' : 'পণ্য যোগ করুন'}</Button></form><ItemGrid items={products} empty="এখনও কোনো পণ্য যোগ করা হয়নি।" render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.name}</b><p className="text-sm text-ink-400">{item.category} · {money(item.price)} · স্টক {item.stock}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
 }
 function ItemGrid<T>({ items, empty, render }: { items: T[]; empty: string; render: (item: T) => React.ReactNode }) { return <div className="mt-6 space-y-3">{items.length ? items.map((item, index) => <div key={(item as { id: string }).id || index} className="flex items-center gap-3 rounded-2xl bg-ink-50 p-4">{render(item)}</div>) : <p className="rounded-2xl bg-ink-50 p-4 text-ink-400">{empty}</p>}</div>; }
 function Reports({ orders, students, products }: { orders: Order[]; students: Student[]; products: Product[] }) { const feeIncome = students.reduce((sum, student) => sum + student.monthlyFee * student.paidMonths.length, 0); const productIncome = orders.reduce((sum, order) => sum + order.total, 0); const uninterrupted = students.filter(student => months.every(month => student.paidMonths.includes(month))); const topProduct = [...products].sort((a, b) => a.stock - b.stock)[0]; const max = Math.max(feeIncome, productIncome, 1); return <Panel title="রিপোর্ট"><div className="mt-5 grid gap-4 md:grid-cols-2"><ReportCard title="কাস্টমার রিপোর্ট" value={`${orders.length} অর্ডার`} note="মোট অনলাইন ক্রেতা ও অর্ডার" icon={<Users />} /><ReportCard title="পণ্য রিপোর্ট" value={topProduct?.name || 'ডেটা নেই'} note="স্টক অনুযায়ী জনপ্রিয় পণ্য" icon={<Package />} /><ReportCard title="ছাত্র রিপোর্ট" value={`${uninterrupted.length} নিয়মিত`} note="সব মাসে ফি প্রদানকারী ছাত্র" icon={<CheckCircle2 />} /><ReportCard title="আয় রিপোর্ট" value={money(feeIncome + productIncome)} note="ফি ও পণ্য বিক্রির সম্মিলিত আয়" icon={<BarChart3 />} /></div><div className="mt-6 rounded-2xl bg-ink-50 p-5"><h3 className="font-display text-xl font-bold text-ink-500">আয়ের তুলনা</h3>{[['ছাত্রদের মাসিক ফি', feeIncome, '#8B5CF6'], ['পণ্য বিক্রি', productIncome, '#FF6B35']].map(([label, value, color]) => <div key={String(label)} className="mt-4"><div className="mb-1 flex justify-between font-bold text-ink-500"><span>{label}</span><span>{money(Number(value))}</span></div><div className="h-4 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full" style={{ width: `${(Number(value) / max) * 100}%`, backgroundColor: String(color) }} /></div></div>)}<p className="mt-5 font-bold text-ink-500">বেশি আয়: {feeIncome >= productIncome ? 'ছাত্রদের ফি' : 'পণ্য বিক্রি'} থেকে</p></div></Panel>; }

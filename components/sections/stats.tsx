@@ -3,6 +3,7 @@
 import { motion, useInView, animate } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { stats } from '@/lib/data';
+import { useLanguage } from '@/lib/i18n/context';
 
 function Counter({ to, suffix }: { to: number; suffix: string }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -28,13 +29,14 @@ function Counter({ to, suffix }: { to: number; suffix: string }) {
 }
 
 export function Stats() {
+  const { t } = useLanguage();
   return (
     <section className="relative section-pad">
       <div className="container">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((s, i) => (
             <motion.div
-              key={s.label}
+              key={s.label.en}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
@@ -42,7 +44,6 @@ export function Stats() {
               whileHover={{ y: -8 }}
               className="group relative overflow-hidden rounded-3xl border border-white/60 bg-white/80 p-8 shadow-lg shadow-ink-500/5 backdrop-blur-sm transition-all hover:shadow-2xl"
             >
-              {/* Watercolor wash background */}
               <div
                 className="pointer-events-none absolute -top-12 -right-12 h-32 w-32 rounded-full blur-2xl opacity-20 transition group-hover:opacity-40"
                 style={{ background: s.color }}
@@ -55,10 +56,9 @@ export function Stats() {
                 <Counter to={s.value} suffix={s.suffix} />
               </div>
               <div className="mt-2 text-sm font-medium uppercase tracking-widest text-ink-400">
-                {s.label}
+                {t(s.label)}
               </div>
 
-              {/* Hand-drawn accent */}
               <svg
                 viewBox="0 0 100 12"
                 className="mt-4 h-2 w-24 overflow-visible"

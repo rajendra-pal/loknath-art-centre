@@ -3,11 +3,10 @@
 import { supabase } from "@/lib/supabase/client";
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Lock, Mail, Phone, Eye, EyeOff, ShieldCheck, Sparkles, ArrowRight } from 'lucide-react';
+import { X, User, Lock, Mail, Phone, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { useAuth } from './auth-context';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 
 export function AuthModal() {
   const { loginModal, closeLogin, login, register } = useAuth();
@@ -15,7 +14,6 @@ export function AuthModal() {
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [mode, setMode] = React.useState<'login' | 'register'>(loginModal.mode);
-  const [role, setRole] = React.useState<'admin' | 'customer'>(loginModal.role);
   const [passwordValue, setPasswordValue] = React.useState('');
 
   const loginWithGoogle = async () => {
@@ -33,7 +31,6 @@ export function AuthModal() {
 
   React.useEffect(() => {
     setMode(loginModal.mode);
-    setRole(loginModal.role);
     setPasswordValue('');
     setShowPassword(false);
     setError(null);
@@ -48,7 +45,7 @@ export function AuthModal() {
     const password = data.get('password') as string;
     try {
       if (mode === 'login') {
-        const res = await login(email, password, role);
+        const res = await login(email, password);
         if (!res.ok) {
           setError(res.error ?? 'Login Failed');
           return;
@@ -71,16 +68,6 @@ export function AuthModal() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const fillDemo = (kind: 'admin' | 'customer') => {
-    const form = document.getElementById('auth-form') as HTMLFormElement | null;
-    if (!form) return;
-    (form.elements.namedItem('email') as HTMLInputElement).value =
-      kind === 'admin' ? 'rakhalchandra57@gmail.com' : 'demo@loknath.in';
-    (form.elements.namedItem('password') as HTMLInputElement).value =
-      kind === 'admin' ? 'rakhal57' : 'demo123';
-    setPasswordValue(kind === 'admin' ? 'rakhal57' : 'demo123');
   };
 
   return (
@@ -106,9 +93,7 @@ export function AuthModal() {
               className="relative h-32 overflow-hidden"
               style={{
                 background:
-                  role === 'admin'
-                    ? 'linear-gradient(135deg, #8B5CF6 0%, #FF5C8A 100%)'
-                    : 'linear-gradient(135deg, #FF6B35 0%, #FF5C8A 100%)',
+                  'linear-gradient(135deg, #FF6B35 0%, #FF5C8A 100%)',
               }}
             >
               <svg className="absolute -top-6 -left-6 h-32 w-32 text-white/15" viewBox="0 0 200 200">
@@ -128,54 +113,16 @@ export function AuthModal() {
               </button>
               <div className="absolute bottom-4 left-6 text-white">
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest backdrop-blur">
-                  {role === 'admin' ? (
-                    <>
-                      <ShieldCheck className="h-3 w-3" /> Admin Portal
-                    </>
-                  ) : (
-                    <>
-                      <User className="h-3 w-3" /> Customer Portal
-                    </>
-                  )}
+                  <User className="h-3 w-3" /> Welcome
                 </div>
                 <h3 className="mt-2 font-display text-2xl font-bold">
-                  {mode === 'login'
-                    ? role === 'admin'
-                      ? 'Admin Login'
-                      : 'Welcome'
-                    : 'Create Account'}
+                  {mode === 'login' ? 'Login' : 'Create Account'}
                 </h3>
               </div>
             </div>
 
             {/* Body */}
             <div className="p-6">
-              {/* Role switcher (only when in login mode) */}
-              {mode === 'login' && (
-                <div className="mb-4 inline-flex rounded-full bg-ink-50 p-1 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setRole('customer')}
-                    className={cn(
-                      'rounded-full px-4 py-1.5 font-semibold transition',
-                      role === 'customer' ? 'bg-white text-ink-500 shadow' : 'text-ink-400'
-                    )}
-                  >
-                    Customer
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRole('admin')}
-                    className={cn(
-                      'rounded-full px-4 py-1.5 font-semibold transition',
-                      role === 'admin' ? 'bg-white text-ink-500 shadow' : 'text-ink-400'
-                    )}
-                  >
-                    Admin
-                  </button>
-                </div>
-              )}
-
               <form id="auth-form" onSubmit={onSubmit} className="space-y-3">
                 {mode === 'register' && (
                   <div className="relative">
@@ -280,31 +227,8 @@ export function AuthModal() {
                     </svg>
                     Continue with Google
                   </Button>
-                </div>  
-              </form>
-
-              {/* Demo fill helpers */}
-              {mode === 'login' && (
-                <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-ink-400">দ্রুত ডেমো:</span>
-                  <button
-                    type="button"
-                    onClick={() => fillDemo('admin')}
-                    className="rounded-full bg-palette-purple/10 px-3 py-1 font-semibold text-palette-purple hover:bg-palette-purple/20"
-                  >
-                    <ShieldCheck className="mr-1 inline h-3 w-3" />
-                    Admin demo
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => fillDemo('customer')}
-                    className="rounded-full bg-palette-orange/10 px-3 py-1 font-semibold text-palette-orange hover:bg-palette-orange/20"
-                  >
-                    <Sparkles className="mr-1 inline h-3 w-3" />
-                    Customer demo
-                  </button>
                 </div>
-              )}
+              </form>
 
               <div className="mt-5 text-center text-sm text-ink-400">
                 {mode === 'login' ? (
