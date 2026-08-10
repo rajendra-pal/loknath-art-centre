@@ -11,19 +11,28 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { faqs } from '@/lib/data';
+import { useLanguage } from '@/lib/i18n/context';
+import { tr } from '@/lib/i18n/strings';
 
 export function FAQ() {
+  const { t, language } = useLanguage();
   return (
     <section className="relative section-pad">
       <div className="container max-w-4xl">
         <SectionHeading
-          eyebrow="প্রায়শই জিজ্ঞাসিত"
+          eyebrow={tr('faqEyebrow', language)}
           title={
-            <>
-              কোনো <span className="brush-underline">প্রশ্ন?</span>
-            </>
+            language === 'bn' ? (
+              <>
+                কোনো <span className="brush-underline">প্রশ্ন?</span>
+              </>
+            ) : (
+              <>
+                Got a <span className="brush-underline">question?</span>
+              </>
+            )
           }
-          description="স্টুডিওতে যোগ দেওয়ার আগে আপনার জানতে চাওয়া সবকিছু।"
+          description={tr('faqDescription', language)}
         />
 
         <motion.div
@@ -39,11 +48,11 @@ export function FAQ() {
                 <AccordionTrigger>
                   <span className="flex items-center gap-3">
                     <HelpCircle className="h-5 w-5 text-palette-orange" />
-                    {f.question}
+                    {t(f.question)}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <p className="pl-8 leading-relaxed text-ink-400">{f.answer}</p>
+                  <p className="pl-8 leading-relaxed text-ink-400">{t(f.answer)}</p>
                 </AccordionContent>
               </AccordionItem>
             ))}

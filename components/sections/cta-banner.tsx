@@ -3,9 +3,11 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
 import { ctaContent } from '@/lib/data';
+import { useLanguage } from '@/lib/i18n/context';
 
 export function CTABanner() {
   const ref = useRef<HTMLElement>(null);
+  const { t } = useLanguage();
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ['start end', 'end start'],
@@ -46,17 +48,17 @@ export function CTABanner() {
                 viewport={{ once: true }}
                 className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white backdrop-blur-sm"
               >
-                {ctaContent.badge}
+                {t(ctaContent.badge)}
               </motion.span>
               <h2 className="mt-5 font-display text-4xl font-bold text-white sm:text-5xl lg:text-6xl">
-                {ctaContent.title1}
+                {t(ctaContent.title1)}
                 <br />
                 <span className="handwritten text-5xl text-white/90 lg:text-7xl">
-                  {ctaContent.title2}
+                  {t(ctaContent.title2)}
                 </span>
               </h2>
               <p className="mt-4 max-w-md text-lg text-white/90">
-                {ctaContent.description}
+                {t(ctaContent.description)}
               </p>
             </div>
 
@@ -65,13 +67,13 @@ export function CTABanner() {
                 href="#contact"
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-base font-bold text-ink-500 shadow-2xl transition hover:scale-[1.02]"
               >
-                {ctaContent.primary} →
+                {t(ctaContent.primary)} →
               </a>
               <a
                 href="tel:+919876543210"
                 className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/40 bg-white/10 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
               >
-                {ctaContent.secondary}
+                {t(ctaContent.secondary)}
               </a>
             </div>
           </div>

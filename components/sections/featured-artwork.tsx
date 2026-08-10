@@ -7,8 +7,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { SectionHeading } from '@/components/ui/section-heading';
 import { BrushDivider } from '@/components/ui/brush-divider';
 import { featuredArtwork } from '@/lib/data';
+import { useLanguage } from '@/lib/i18n/context';
+import { tr } from '@/lib/i18n/strings';
 
 export function FeaturedArtwork() {
+  const { t, language } = useLanguage();
   const [emblaRef, embla] = useEmblaCarousel({ loop: true, align: 'start' });
   const [selected, setSelected] = React.useState(0);
 
@@ -21,13 +24,19 @@ export function FeaturedArtwork() {
     <section id="students" className="relative section-pad">
       <div className="container">
         <SectionHeading
-          eyebrow="নির্বাচিত ছাত্র-ছাত্রীর কাজ"
+          eyebrow={tr('featuredEyebrow', language)}
           title={
-            <>
-              তৈরি হওয়া <span className="brush-underline">মাস্টারপিস</span>
-            </>
+            language === 'bn' ? (
+              <>
+                তৈরি হওয়া <span className="brush-underline">মাস্টারপিস</span>
+              </>
+            ) : (
+              <>
+                <span className="brush-underline">Masterpieces</span> made here
+              </>
+            )
           }
-          description="আমাদের সবচেয়ে প্রতিভাবান ছাত্র-ছাত্রীদের হাতে তৈরি নির্বাচিত শিল্পকর্ম।"
+          description={tr('featuredDescription', language)}
         />
 
         <div className="relative">
@@ -44,16 +53,16 @@ export function FeaturedArtwork() {
                   >
                     <img
                       src={a.image}
-                      alt={a.title}
+                      alt={t(a.title)}
                       className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-ink-700/80 via-ink-700/0 to-transparent" />
                     <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
                       <p className="text-xs font-semibold uppercase tracking-widest text-palette-yellow">
-                        {a.medium}
+                        {t(a.medium)}
                       </p>
                       <h3 className="mt-2 font-display text-2xl font-bold">
-                        {a.title}
+                        {t(a.title)}
                       </h3>
                     </div>
                   </motion.div>
@@ -67,7 +76,7 @@ export function FeaturedArtwork() {
             <button
               onClick={() => embla?.scrollPrev()}
               className="grid h-12 w-12 place-items-center rounded-full border border-ink-200 bg-white text-ink-500 transition hover:border-palette-orange hover:text-palette-orange"
-              aria-label="আগের"
+              aria-label={tr('prevSlide', language)}
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -81,14 +90,14 @@ export function FeaturedArtwork() {
                       ? 'w-8 bg-palette-orange'
                       : 'w-2 bg-ink-200 hover:bg-ink-300'
                   }`}
-                  aria-label={`স্লাইড ${i + 1}`}
+                  aria-label={`${tr('slideAria', language)} ${i + 1}`}
                 />
               ))}
             </div>
             <button
               onClick={() => embla?.scrollNext()}
               className="grid h-12 w-12 place-items-center rounded-full border border-ink-200 bg-white text-ink-500 transition hover:border-palette-orange hover:text-palette-orange"
-              aria-label="পরের"
+              aria-label={tr('nextSlide', language)}
             >
               <ChevronRight className="h-5 w-5" />
             </button>

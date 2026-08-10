@@ -23,8 +23,19 @@ import type { Localized } from '@/lib/i18n/pick';
 // Re-export so consumers don't need to import from pick directly.
 export type { Localized } from '@/lib/i18n/pick';
 
-// Helpers for building placeholders — `bn` is duplicated as `en`.
+// `bn` mirrors a Bengali string into both sides so English mode would still
+// show Bengali — keeping this only as an alias for callers that intentionally
+// want a Bengali-only value (e.g. legacy role/badge unions used as CSS keys).
+// New content should use `loc(en, bn)` so English mode is actually English.
 const bn = <T>(value: T): Localized<T> => ({ en: value, bn: value });
+
+/** Build a localized value with explicit en + bn strings. */
+const loc = <T>(en: T, bnValue: T): Localized<T> => ({ en, bn: bnValue });
+
+/** Convenience for a Bengali-only union that doubles as English (used as CSS key). */
+function mirror<T extends string>(value: T): Localized<T> {
+  return { en: value, bn: value };
+}
 
 export type Course = {
   id: string;
@@ -864,15 +875,15 @@ export const faqs: FAQItem[] = [
 // expose a Localized wrapper so the helper can target them.
 // =====================================================
 export const navLinks: { label: Localized<string>; href: string }[] = [
-  { label: bn('Home'), href: '#home' },
-  { label: bn('About'), href: '#about' },
-  { label: bn('Courses'), href: '#courses' },
-  { label: bn('Gallery'), href: '#gallery' },
-  { label: bn("Students' Works"), href: '#students' },
-  { label: bn('Art Store'), href: '/store' },
-  { label: bn('Events'), href: '#events' },
-  { label: bn('Blog'), href: '#blog' },
-  { label: bn('Contact'), href: '#contact' },
+  { label: loc('Home', 'হোম'), href: '#home' },
+  { label: loc('About', 'আমাদের সম্পর্কে'), href: '#about' },
+  { label: loc('Courses', 'কোর্স'), href: '#courses' },
+  { label: loc('Gallery', 'গ্যালারি'), href: '#gallery' },
+  { label: loc("Students' Works", 'শিক্ষার্থীদের কাজ'), href: '#students' },
+  { label: loc('Art Store', 'আর্ট স্টোর'), href: '/store' },
+  { label: loc('Events', 'ইভেন্ট'), href: '#events' },
+  { label: loc('Blog', 'ব্লগ'), href: '#blog' },
+  { label: loc('Contact', 'যোগাযোগ'), href: '#contact' },
 ];
 
 // =====================================================
@@ -900,42 +911,42 @@ export const aboutContent = {
 // CTA BANNER
 // =====================================================
 export const ctaContent = {
-  badge: bn('সীমিত আসন · নতুন ব্যাচ'),
-  title1: bn('আপনার গল্প'),
-  title2: bn('আঁকার জন্য প্রস্তুত?'),
-  description: bn('এই মাসে ভর্তি হলে বিনামূল্যে স্টার্টার আর্ট কিট পান। প্রতি ব্যাচে মাত্র ৮টি আসন।'),
-  primary: bn('এখনই ভর্তি হোন'),
-  secondary: bn('ফোন করুন +৯১ ৯৮৭৬৫ ৪৩২১০'),
+  badge: loc('Limited seats · New batch', 'সীমিত আসন · নতুন ব্যাচ'),
+  title1: loc('Ready to paint', 'আপনার গল্প'),
+  title2: loc('your story?', 'আঁকার জন্য প্রস্তুত?'),
+  description: loc('Enrol this month and receive a free starter art kit. Only 8 seats per batch.', 'এই মাসে ভর্তি হলে বিনামূল্যে স্টার্টার আর্ট কিট পান। প্রতি ব্যাচে মাত্র ৮টি আসন।'),
+  primary: loc('Enrol now', 'এখনই ভর্তি হোন'),
+  secondary: loc('Call +91 98765 43210', 'ফোন করুন +৯১ ৯৮৭৬৫ ৪৩২১০'),
 };
 
 // =====================================================
 // CONTACT INFO
 // =====================================================
 export const contactInfo = {
-  badge: bn('যোগাযোগ করুন'),
-  titleBefore: bn('একটি'),
-  titleHighlight: bn('সৃজনশীল'),
-  titleAfter: bn('যাত্রা শুরু করুন'),
-  description: bn('আমাদের স্টুডিওতে আসুন, ফোন করুন অথবা মেসেজ পাঠান — আপনার কথা শুনতে চাই।'),
+  badge: loc('Get in touch', 'যোগাযোগ করুন'),
+  titleBefore: loc('Start a', 'একটি'),
+  titleHighlight: loc('creative', 'সৃজনশীল'),
+  titleAfter: loc('journey', 'যাত্রা শুরু করুন'),
+  description: loc('Visit our studio, give us a call, or send a message — we would love to hear from you.', 'আমাদের স্টুডিওতে আসুন, ফোন করুন অথবা মেসেজ পাঠান — আপনার কথা শুনতে চাই।'),
   form: {
-    name: bn('পুরো নাম'),
-    phone: bn('ফোন নম্বর'),
-    email: bn('ইমেইল'),
-    course: bn('কোর্স নির্বাচন করুন'),
-    message: bn('আপনার বার্তা'),
+    name: loc('Full name', 'পুরো নাম'),
+    phone: loc('Phone number', 'ফোন নম্বর'),
+    email: loc('Email', 'ইমেইল'),
+    course: loc('Select a course', 'কোর্স নির্বাচন করুন'),
+    message: loc('Your message', 'আপনার বার্তা'),
     placeholders: {
-      name: bn('আপনার নাম'),
-      phone: bn('+৯১ ...'),
-      email: bn('you@example.com'),
-      message: bn('আপনার লক্ষ্য সম্পর্কে একটু লিখুন...'),
+      name: loc('Your name', 'আপনার নাম'),
+      phone: loc('+91 ...', '+৯১ ...'),
+      email: loc('you@example.com', 'you@example.com'),
+      message: loc('Tell us a little about your goals...', 'আপনার লক্ষ্য সম্পর্কে একটু লিখুন...'),
     },
-    submit: bn('বার্তা পাঠান'),
+    submit: loc('Send message', 'বার্তা পাঠান'),
   },
   details: [
-    { icon: 'MapPin', title: bn('স্টুডিওতে আসুন'), lines: [bn('ময়নাগুড়ি'), bn('সুলতানপুর - 713146, পশ্চিমবঙ্গ')], color: '#FF6B35' },
-    { icon: 'Phone', title: bn('ফোন করুন'), lines: [bn('+91 62963 77408'), bn('+91 62963 77408')], color: '#8B5CF6' },
-    { icon: 'Mail', title: bn('ইমেইল'), lines: [bn('hello@loknathart.in'), bn('admissions@loknathart.in')], color: '#FF5C8A' },
-    { icon: 'MessageCircle', title: bn('হোয়াটসঅ্যাপ'), lines: [bn('+91 62963 77408'), bn('24 x 7')], color: '#10B981' },
+    { icon: 'MapPin', title: loc('Visit the studio', 'স্টুডিওতে আসুন'), lines: [loc('Moynaguri', 'ময়নাগুড়ি'), loc('Sultanpur - 713146, West Bengal', 'সুলতানপুর - 713146, পশ্চিমবঙ্গ')], color: '#FF6B35' },
+    { icon: 'Phone', title: loc('Call us', 'ফোন করুন'), lines: [loc('+91 62963 77408', '+91 62963 77408'), loc('+91 62963 77408', '+91 62963 77408')], color: '#8B5CF6' },
+    { icon: 'Mail', title: loc('Email', 'ইমেইল'), lines: [loc('hello@loknathart.in', 'hello@loknathart.in'), loc('admissions@loknathart.in', 'admissions@loknathart.in')], color: '#FF5C8A' },
+    { icon: 'MessageCircle', title: loc('WhatsApp', 'হোয়াটসঅ্যাপ'), lines: [loc('+91 62963 77408', '+91 62963 77408'), loc('24 x 7', '24 x 7')], color: '#10B981' },
   ],
 };
 
@@ -947,20 +958,20 @@ export const footerContent = {
   brandSub: bn('Art School'),
   description: bn('২০১০ সাল থেকে বাংলায় সৃজনশীলতার লালন। যেখানে কল্পনা শিল্প হয়ে ওঠে এবং প্রতিটি রেখা একটি গল্প বলে।'),
   newsletter: {
-    placeholder: bn('আপনার ইমেইল'),
-    button: bn('সাবস্ক্রাইব'),
-    note: bn('আর্ট টিপস, ইভেন্ট আপডেট ও বিশেষ অফার পান। স্প্যাম নয়।'),
-    success: bn('স্টুডিওতে স্বাগতম!'),
-    successDesc: bn('আমরা আপনাকে আর্ট টিপস ও ইভেন্ট আপডেট পাঠাব।'),
+    placeholder: loc('Your email', 'আপনার ইমেইল'),
+    button: loc('Subscribe', 'সাবস্ক্রাইব'),
+    note: loc('Get art tips, event updates and special offers. No spam.', 'আর্ট টিপস, ইভেন্ট আপডেট ও বিশেষ অফার পান। স্প্যাম নয়।'),
+    success: loc('Welcome to the studio!', 'স্টুডিওতে স্বাগতম!'),
+    successDesc: loc('We will send you art tips and event updates.', 'আমরা আপনাকে আর্ট টিপস ও ইভেন্ট আপডেট পাঠাব।'),
   },
-  explore: bn('ঘুরে দেখুন'),
-  store: bn('স্টোর'),
-  reach: bn('যোগাযোগ'),
-  address: bn('৪২ পার্ক স্ট্রিট, অ্যাকাডেমি অব ফাইন আর্টসের কাছে, কলকাতা ৭০০০১৬'),
-  copyright: bn('© ২০২৬ লোকনাথ আর্ট সেন্টার। কল্কাতায় ভালোবাসায় তৈরি।'),
-  privacy: bn('গোপনীয়তা'),
-  terms: bn('শর্তাবলী'),
-  backToTop: bn('উপরে ফিরে যান'),
-  customerLogin: bn('Customer Login'),
-  adminLogin: bn('Admin Login'),
+  explore: loc('Explore', 'ঘুরে দেখুন'),
+  store: loc('Store', 'স্টোর'),
+  reach: loc('Reach us', 'যোগাযোগ'),
+  address: loc('42 Park Street, near Academy of Fine Arts, Kolkata 700016', '৪২ পার্ক স্ট্রিট, অ্যাকাডেমি অব ফাইন আর্টসের কাছে, কলকাতা ৭০০০১৬'),
+  copyright: loc('© 2026 Loknath Art Center. Made with love in Kolkata.', '© ২০২৬ লোকনাথ আর্ট সেন্টার। কল্কাতায় ভালোবাসায় তৈরি।'),
+  privacy: loc('Privacy', 'গোপনীয়তা'),
+  terms: loc('Terms', 'শর্তাবলী'),
+  backToTop: loc('Back to top', 'উপরে ফিরে যান'),
+  customerLogin: loc('Customer Login', 'Customer Login'),
+  adminLogin: loc('Admin Login', 'Admin Login'),
 };

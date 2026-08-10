@@ -7,9 +7,12 @@ import { X, User, Lock, Mail, Phone, Eye, EyeOff, ArrowRight } from 'lucide-reac
 import { useAuth } from './auth-context';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useLanguage } from '@/lib/i18n/context';
+import { tr } from '@/lib/i18n/strings';
 
 export function AuthModal() {
   const { loginModal, closeLogin, login, register } = useAuth();
+  const { language } = useLanguage();
   const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -47,7 +50,7 @@ export function AuthModal() {
       if (mode === 'login') {
         const res = await login(email, password);
         if (!res.ok) {
-          setError(res.error ?? 'Login Failed');
+          setError(res.error ?? tr('auth.loginFailed', language));
           return;
         }
         closeLogin();
@@ -55,12 +58,12 @@ export function AuthModal() {
         const name = data.get('name') as string;
         const phone = data.get('phone') as string;
         if (!name || !email || !password) {
-          setError('Fill all required fields');
+          setError(tr('auth.fillAllFields', language));
           return;
         }
         const res = await register({ name, email, phone, password });
         if (!res.ok) {
-          setError(res.error ?? 'Registration Failed');
+          setError(res.error ?? tr('auth.registrationFailed', language));
           return;
         }
         closeLogin();
@@ -113,10 +116,10 @@ export function AuthModal() {
               </button>
               <div className="absolute bottom-4 left-6 text-white">
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest backdrop-blur">
-                  <User className="h-3 w-3" /> Welcome
+                  <User className="h-3 w-3" /> {tr('welcome', language)}
                 </div>
                 <h3 className="mt-2 font-display text-2xl font-bold">
-                  {mode === 'login' ? 'Login' : 'Create Account'}
+                  {mode === 'login' ? tr('login', language) : tr('createAccount', language)}
                 </h3>
               </div>
             </div>
@@ -130,7 +133,7 @@ export function AuthModal() {
                     <Input
                       name="name"
                       required
-                      placeholder="Full Name"
+                      placeholder={tr('fullName', language)}
                       className="pl-10"
                     />
                   </div>
@@ -141,7 +144,7 @@ export function AuthModal() {
                     type="email"
                     name="email"
                     required
-                    placeholder="Email Address"
+                    placeholder={tr('emailAddress', language)}
                     className="pl-10"
                   />
                 </div>
@@ -151,7 +154,7 @@ export function AuthModal() {
                     <Input
                       type="tel"
                       name="phone"
-                      placeholder="Phone Number"
+                      placeholder={tr('phoneNumber', language)}
                       className="pl-10"
                     />
                   </div>
@@ -164,13 +167,13 @@ export function AuthModal() {
                     value={passwordValue}
                     onChange={(e) => setPasswordValue(e.target.value)}
                     required
-                    placeholder="Password"
+                    placeholder={tr('password', language)}
                     className="pl-10 pr-10"
                     minLength={4}
                   />
                   <button
                     type="button"
-                    aria-label="Toggle password"
+                    aria-label={tr('togglePassword', language)}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => setShowPassword((visible) => !visible)}
                     className="absolute right-3 top-1/2 z-10 -translate-y-1/2 text-ink-300 hover:text-ink-500"
@@ -193,10 +196,10 @@ export function AuthModal() {
                     size="lg"
                   >
                     {loading
-                      ? "Please wait..."
+                      ? tr('pleaseWait', language)
                       : mode === "login"
-                      ? "Login"
-                      : "Create Account"}
+                      ? tr('login', language)
+                      : tr('createAccount', language)}
 
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
@@ -225,7 +228,7 @@ export function AuthModal() {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06L5.84 9.9C6.71 7.31 9.14 5.38 12 5.38z"
                       />
                     </svg>
-                    Continue with Google
+                    {tr('continueWithGoogle', language)}
                   </Button>
                 </div>
               </form>
@@ -233,7 +236,7 @@ export function AuthModal() {
               <div className="mt-5 text-center text-sm text-ink-400">
                 {mode === 'login' ? (
                   <>
-                    Don't have an account?{' '}
+                    {tr('dontHaveAccount', language)}{' '}
                     <button
                       type="button"
                       onClick={() => {
@@ -242,12 +245,12 @@ export function AuthModal() {
                       }}
                       className="font-semibold text-palette-orange hover:underline"
                     >
-                      Create Account
+                      {tr('createAccount', language)}
                     </button>
                   </>
                 ) : (
                   <>
-                    Already have an account?{' '}
+                    {tr('alreadyHaveAccount', language)}{' '}
                     <button
                       type="button"
                       onClick={() => {
@@ -256,7 +259,7 @@ export function AuthModal() {
                       }}
                       className="font-semibold text-palette-orange hover:underline"
                     >
-                      Login
+                      {tr('login', language)}
                     </button>
                   </>
                 )}

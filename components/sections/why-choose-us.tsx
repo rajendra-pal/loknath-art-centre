@@ -6,20 +6,27 @@ import { SectionHeading } from '@/components/ui/section-heading';
 import { BrushDivider } from '@/components/ui/brush-divider';
 import { features } from '@/lib/data';
 import { useLanguage } from '@/lib/i18n/context';
+import { tr, ui } from '@/lib/i18n/strings';
 
 export function WhyChooseUs() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   return (
     <section className="relative section-pad">
       <div className="container">
         <SectionHeading
-          eyebrow="কেন অভিভাবকরা আমাদের বেছে নেন"
+          eyebrow={tr('whyChooseEyebrow', language)}
           title={
-            <>
-              যেখানে ছোট হাত শেখে <span className='whitespace-nowrap'><span className="brush-underline">বড়</span> কিছু </span>
-            </>
+            language === 'bn' ? (
+              <>
+                যেখানে ছোট হাত শেখে <span className="whitespace-nowrap"><span className="brush-underline">বড়</span> কিছু</span>
+              </>
+            ) : (
+              <>
+                Where little hands learn <span className="whitespace-nowrap"><span className="brush-underline">big</span> things</span>
+              </>
+            )
           }
-          description="আটটি কারণে লোকনাথ আর্ট সেন্টার বাংলার সবচেয়ে প্রিয় আর্ট স্কুল — শিশু, কিশোর এবং উচ্চাকাঙ্ক্ষী শিল্পীদের জন্য।"
+          description={tr('whyChooseDescription', language)}
         />
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

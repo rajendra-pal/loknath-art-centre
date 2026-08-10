@@ -4,6 +4,19 @@ import * as React from 'react';
 import { createContext, useContext } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { showToast } from '@/components/ui/toaster';
+import { tr } from '@/lib/i18n/strings';
+import type { Language } from '@/lib/i18n/pick';
+
+/** Read the user's current language preference from localStorage (sync). */
+function currentLang(): Language {
+  if (typeof window === 'undefined') return 'bn';
+  try {
+    const stored = window.localStorage.getItem('lac.lang');
+    return (stored === 'en' ? 'en' : 'bn') as Language;
+  } catch {
+    return 'bn';
+  }
+}
 
 export type User = {
   id: string;
@@ -105,7 +118,7 @@ export function AuthProvider({
 
     if (accountError) {
       console.error('Account lookup failed:', accountError.message ?? accountError);
-      showToast({ title: 'Unable to load account', description: accountError.message ?? 'Account record not found.', variant: 'destructive' });
+      showToast({ title: tr('auth.accountLoadFailed', currentLang()), description: accountError.message ?? 'Account record not found.', variant: 'destructive' });
       setUser(null);
       setLoading(false);
       return;
@@ -132,7 +145,7 @@ export function AuthProvider({
 
         if (byEmailError) {
           console.error('Account lookup by email failed:', byEmailError.message ?? byEmailError);
-          showToast({ title: 'Unable to load account', description: byEmailError.message ?? 'Account record not found.', variant: 'destructive' });
+          showToast({ title: tr('auth.accountLoadFailed', currentLang()), description: byEmailError.message ?? 'Account record not found.', variant: 'destructive' });
           setUser(null);
           setLoading(false);
           return;
@@ -149,7 +162,7 @@ export function AuthProvider({
 
           if (claimError || !claimed) {
             console.error('Account re-attach failed:', claimError?.message ?? claimError);
-            showToast({ title: 'Unable to load account', description: claimError?.message ?? 'Account record not found.', variant: 'destructive' });
+            showToast({ title: tr('auth.accountLoadFailed', currentLang()), description: claimError?.message ?? 'Account record not found.', variant: 'destructive' });
             setUser(null);
             setLoading(false);
             return;
@@ -191,7 +204,7 @@ export function AuthProvider({
 
       if (insertError || !inserted) {
         console.error('Account provisioning failed:', insertError?.message ?? insertError);
-        showToast({ title: 'Unable to load account', description: insertError?.message ?? 'Account record not found.', variant: 'destructive' });
+        showToast({ title: tr('auth.accountLoadFailed', currentLang()), description: insertError?.message ?? 'Account record not found.', variant: 'destructive' });
         setUser(null);
         setLoading(false);
         return;
@@ -244,7 +257,7 @@ export function AuthProvider({
       };
 
     showToast({
-      title: 'Login Successful',
+      title: tr('auth.loginSuccess', currentLang()),
       variant: 'success',
     });
 
@@ -313,12 +326,12 @@ export function AuthProvider({
 
     if (accountError) {
       console.error('Account setup failed:', accountError.message);
-      showToast({ title: 'Account setup failed', description: accountError.message, variant: 'destructive' });
+      showToast({ title: tr('auth.accountSetupFailed', currentLang()), description: accountError.message, variant: 'destructive' });
       return { ok: false, error: accountError.message };
     }
 
     showToast({
-      title: 'Account Created',
+      title: tr('auth.accountCreated', currentLang()),
       variant: 'success',
     });
 
@@ -339,7 +352,7 @@ export function AuthProvider({
     setUser(null);
 
     showToast({
-      title: 'Logged out',
+      title: tr('auth.loggedOut', currentLang()),
     });
   }
 
@@ -347,7 +360,7 @@ export function AuthProvider({
     if (!user) return { ok: false, error: 'Not logged in' };
     const updatedUser = { ...user, phone: data.phone, address: data.address };
     const { error: accountError } = await supabase.from('accounts').update({ phone: data.phone, address: data.address }).eq('id', user.id).select();
-    if (accountError) { console.error(accountError); showToast({ title: 'Profile update failed', description: accountError.message, variant: 'destructive' }); return { ok: false, error: accountError.message }; }
+    if (accountError) { console.error(accountError); showToast({ title: tr('auth.profileUpdateFailed', currentLang()), description: accountError.message, variant: 'destructive' }); return { ok: false, error: accountError.message }; }
     setUser(updatedUser);
     return { ok: true };
   }

@@ -13,6 +13,8 @@ import { supabase } from '@/lib/supabase/client';
 import { AdminOrdersPanel } from '@/components/admin-orders-panel';
 import { AdminReports } from '@/components/admin-reports';
 import { showToast } from '@/components/ui/toaster';
+import { useLanguage } from '@/lib/i18n/context';
+import { tr } from '@/lib/i18n/strings';
 type Order = { id: string; total: number; createdAt: string; status: string; deliveryDate?: string; adminMessage?: string; items: Array<{ id: string; name: string; price: number; image: string; quantity: number }>; customer: { name: string; email: string; phone: string; address: string; city: string; pincode: string; notes?: string }; paymentMethod: string; paymentStatus: string; paymentReference?: string };
 type Course = { id: string; title: string; duration: string; fee: number; description: string; image: string; isActive: boolean; displayOrder: number };
 type Event = { id: string; title: string; date: string; details: string };
@@ -43,14 +45,16 @@ const normalizeOrder = (value: unknown): Order | null => {
 
 export default function AdminPage() {
   const { user, loading, openLogin } = useAuth();
+  const { language } = useLanguage();
   const router = useRouter();
   useEffect(() => { if (!loading && user && user.role !== 'admin') router.push('/'); }, [loading, router, user]);
   if (loading) return <div className="grid min-h-[60vh] place-items-center"><div className="h-12 w-12 animate-spin rounded-full border-4 border-palette-orange border-t-transparent" /></div>;
-  if (!user || user.role !== 'admin') return <div className="grid min-h-[60vh] place-items-center px-4"><div className="max-w-md text-center"><LogIn className="mx-auto h-10 w-10 text-palette-purple" /><h1 className="mt-5 font-display text-3xl font-bold text-ink-500">অ্যাডমিন অ্যাকাউন্ট প্রয়োজন</h1><Button onClick={() => openLogin('login', 'admin')} className="mt-6">অ্যাডমিন লগইন</Button></div></div>;
+  if (!user || user.role !== 'admin') return <div className="grid min-h-[60vh] place-items-center px-4"><div className="max-w-md text-center"><LogIn className="mx-auto h-10 w-10 text-palette-purple" /><h1 className="mt-5 font-display text-3xl font-bold text-ink-500">{tr('adminLoginRequired', language)}</h1><Button onClick={() => openLogin('login', 'admin')} className="mt-6">{tr('adminLoginButton', language)}</Button></div></div>;
   return <AdminDashboard user={user as { id: string; name: string; email: string }} />;
 }
 
 function AdminDashboard({ user }: { user: { id: string; name: string; email: string } }) {
+  const { language } = useLanguage();
   const [active, setActive] = useState<Section | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -134,18 +138,33 @@ function AdminDashboard({ user }: { user: { id: string; name: string; email: str
   const income = studentFeeIncome + orderIncome;
   const pendingIncome = orders.reduce((sum, order) => sum + (order.paymentMethod === 'Cash on Delivery' && order.status !== 'Delivered' ? order.total : 0), 0);
   const actions: { key: Section; label: string; icon: typeof Plus }[] = [
-    { key: 'course', label: 'নতুন কোর্স যোগ করুন', icon: Plus }, { key: 'event', label: 'ইভেন্ট পরিচালনা', icon: CalendarDays }, { key: 'student', label: 'ছাত্র তালিকা', icon: Users }, { key: 'blog', label: 'ব্লগ পোস্ট', icon: BookOpen }, { key: 'product', label: 'পণ্য ম্যানেজমেন্ট', icon: Package }, { key: 'report', label: 'রিপোর্ট', icon: BarChart3 }, { key: 'student_details', label: 'ছাত্র তথ্য', icon: Users }, { key: 'income_report', label: 'আয় রিপোর্ট', icon: DollarSign }, { key: 'settings', label: 'UPI সেটিংস', icon: Settings },
+    { key: 'course', label: tr('addNewCourse', language), icon: Plus },
+    { key: 'event', label: tr('eventManagement', language), icon: CalendarDays },
+    { key: 'student', label: tr('studentList', language), icon: Users },
+    { key: 'blog', label: tr('blogPosts', language), icon: BookOpen },
+    { key: 'product', label: tr('productManagement', language), icon: Package },
+    { key: 'report', label: tr('reports', language), icon: BarChart3 },
+    { key: 'student_details', label: tr('studentInfo', language), icon: Users },
+    { key: 'income_report', label: tr('incomeReport', language), icon: DollarSign },
+    { key: 'settings', label: tr('upiSettings', language), icon: Settings },
   ];
   return <div className="container pt-28 pb-12">
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-3xl bg-gradient-to-br from-palette-purple via-palette-rose to-palette-orange p-8 text-white shadow-2xl md:p-12">
-      <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest"><Sparkles className="h-3 w-3" />Admin Dashboard</div>
-      <h1 className="mt-4 font-display text-4xl font-bold md:text-5xl">স্বাগতম, {user.name}!</h1><p className="mt-2 text-white/85">{user.email}</p>
+      <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest"><Sparkles className="h-3 w-3" />{tr('adminDashboard', language)}</div>
+      <h1 className="mt-4 font-display text-4xl font-bold md:text-5xl">{tr('welcomeAdmin', language)}, {user.name}!</h1><p className="mt-2 text-white/85">{user.email}</p>
     </motion.div>
-    <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{[['মোট ছাত্র-ছাত্রী', students.length, '#FF6B35'], ['সক্রিয় কোর্স', courses.filter((course) => course.isActive).length, '#8B5CF6'], ['মোট অর্ডার', orders.length, '#FF5C8A'], ['মোট আয়', money(income), '#10B981']].map(([label, value, color]) => <div key={String(label)} className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><div className="text-sm text-ink-400">{label}</div><div className="mt-2 font-display text-3xl font-bold" style={{ color: String(color) }}>{value}</div></div>)}</div>
-    <button onClick={() => setShowOrdersPanel(true)} className="mt-8 inline-flex items-center rounded-full bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-palette-purple">সাম্প্রতিক অর্ডার দেখুন</button>
+    <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {[
+        [tr('totalStudents', language), students.length, '#FF6B35'],
+        [tr('activeCourses', language), courses.filter((course) => course.isActive).length, '#8B5CF6'],
+        [tr('totalOrders', language), orders.length, '#FF5C8A'],
+        [tr('totalIncome', language), money(income), '#10B981'],
+      ].map(([label, value, color]) => <div key={String(label)} className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><div className="text-sm text-ink-400">{label}</div><div className="mt-2 font-display text-3xl font-bold" style={{ color: String(color) }}>{value}</div></div>)}
+    </div>
+    <button onClick={() => setShowOrdersPanel(true)} className="mt-8 inline-flex items-center rounded-full bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-palette-purple">{tr('recentOrdersBtn', language)}</button>
     <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
-      <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><h2 className="font-display text-2xl font-bold text-ink-500">দ্রুত অ্যাকশন</h2><div className="mt-4 grid grid-cols-2 gap-3">{actions.map(({ key, label, icon: Icon }) => <button key={key} onClick={() => setActive(key)} className="rounded-2xl bg-gradient-to-br from-cream-200 to-white p-4 text-left text-sm font-bold text-ink-500 transition hover:-translate-y-0.5 hover:shadow-md"><Icon className="mb-2 h-5 w-5 text-palette-purple" />{label}</button>)}</div><Link href="/" className="mt-6 inline-flex text-sm font-semibold text-palette-purple hover:underline">← হোমে ফিরে যান</Link></div>
-      <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><h2 className="font-display text-2xl font-bold text-ink-500">সাম্প্রতিক অর্ডার</h2>{orders.length ? <div className="mt-4 space-y-3">{orders.slice(0, 4).map(order => <div className="flex justify-between rounded-2xl bg-ink-50 p-4" key={order.id}><div><b>{order.customer?.name || 'Customer'}</b><p className="text-xs text-ink-400">{order.status}</p></div><b className="text-palette-orange">{money(order.total)}</b></div>)}</div> : <p className="mt-4 rounded-2xl bg-ink-50 p-4 text-ink-400">এখনও কোনো নতুন অর্ডার নেই।</p>}</div>
+      <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><h2 className="font-display text-2xl font-bold text-ink-500">{tr('quickActions', language)}</h2><div className="mt-4 grid grid-cols-2 gap-3">{actions.map(({ key, label, icon: Icon }) => <button key={key} onClick={() => setActive(key)} className="rounded-2xl bg-gradient-to-br from-cream-200 to-white p-4 text-left text-sm font-bold text-ink-500 transition hover:-translate-y-0.5 hover:shadow-md"><Icon className="mb-2 h-5 w-5 text-palette-purple" />{label}</button>)}</div><Link href="/" className="mt-6 inline-flex text-sm font-semibold text-palette-purple hover:underline">← {tr('backToHome', language)}</Link></div>
+      <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><h2 className="font-display text-2xl font-bold text-ink-500">{tr('recentOrders', language)}</h2>{orders.length ? <div className="mt-4 space-y-3">{orders.slice(0, 4).map(order => <div className="flex justify-between rounded-2xl bg-ink-50 p-4" key={order.id}><div><b>{order.customer?.name || tr('customerBadge', language)}</b><p className="text-xs text-ink-400">{order.status}</p></div><b className="text-palette-orange">{money(order.total)}</b></div>)}</div> : <p className="mt-4 rounded-2xl bg-ink-50 p-4 text-ink-400">{tr('noRecentOrders', language)}</p>}</div>
     </div>
     <section className="hidden mt-8 rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg">
       <h2 className="font-display text-2xl font-bold text-ink-500">অর্ডার পরিচালনা</h2>
@@ -155,7 +174,7 @@ function AdminDashboard({ user }: { user: { id: string; name: string; email: str
         {!orders.length && <p className="rounded-2xl bg-ink-50 p-4 text-ink-400">কোনো অর্ডার নেই।</p>}
       </div>
     </section>
-    <div className="mt-6 grid gap-5 sm:grid-cols-2"><div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-lg"><p className="text-sm font-semibold text-emerald-700">Total Income</p><p className="mt-2 font-display text-3xl font-bold text-emerald-800">{money(income)}</p><p className="mt-1 text-xs text-emerald-700">Student fees, confirmed online payments, and delivered COD.</p></div><div className="rounded-3xl border border-amber-100 bg-amber-50 p-6 shadow-lg"><p className="text-sm font-semibold text-amber-700">Pending Income</p><p className="mt-2 font-display text-3xl font-bold text-amber-800">{money(pendingIncome)}</p><p className="mt-1 text-xs text-amber-700">Cash on Delivery orders not yet delivered.</p></div></div>
+    <div className="mt-6 grid gap-5 sm:grid-cols-2"><div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6 shadow-lg"><p className="text-sm font-semibold text-emerald-700">{tr('totalIncomeCard', language)}</p><p className="mt-2 font-display text-3xl font-bold text-emerald-800">{money(income)}</p><p className="mt-1 text-xs text-emerald-700">{tr('totalIncomeDesc', language)}</p></div><div className="rounded-3xl border border-amber-100 bg-amber-50 p-6 shadow-lg"><p className="text-sm font-semibold text-amber-700">{tr('pendingIncome', language)}</p><p className="mt-2 font-display text-3xl font-bold text-amber-800">{money(pendingIncome)}</p><p className="mt-1 text-xs text-amber-700">{tr('pendingIncomeDesc', language)}</p></div></div>
     {showOrdersPanel && <AdminOrdersPanel orders={orders} selectedOrder={selectedOrder} onSelect={setSelectedOrder} onUpdate={(next) => { setOrders((current) => current.map((order) => order.id === next.id ? next : order)); setSelectedOrder(next); }} onClose={() => { setShowOrdersPanel(false); setSelectedOrder(null); }} />}
 
     <Dialog open={active !== null} onOpenChange={(open) => { if (!open) setActive(null); }}>
@@ -183,6 +202,7 @@ function OrdersManagement({ orders, onSelect }: { orders: Order[]; onSelect: (or
 function StatusPill({ status }: { status: string }) { const styles: Record<string, string> = { 'New Order': 'bg-amber-100 text-amber-800', Confirmed: 'bg-blue-100 text-blue-800', Cancelled: 'bg-rose-100 text-rose-800', Delivered: 'bg-emerald-100 text-emerald-800' }; return <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${styles[status] || 'bg-slate-100 text-slate-700'}`}>{status}</span>; }
 
 function OrderDialog({ order, onOpenChange, onUpdate }: { order: Order | null; onOpenChange: (open: boolean) => void; onUpdate: (order: Order) => void }) {
+  const { language } = useLanguage();
   const [deliveryDate, setDeliveryDate] = useState('');
   useEffect(() => setDeliveryDate(order?.deliveryDate || ''), [order]);
   if (!order) return null;
@@ -191,9 +211,12 @@ function OrderDialog({ order, onOpenChange, onUpdate }: { order: Order | null; o
     await supabase.from('store_orders').update({ order_data: nextOrder }).eq('id', nextOrder.id);
     onUpdate(nextOrder);
   };
-  const confirm = () => { if (!deliveryDate) return; void saveOrderUpdate({ ...order, status: 'Confirmed', deliveryDate, adminMessage: `${productNames} is coming on ${new Date(deliveryDate).toLocaleDateString('en-IN')}.` }); };
-  const cancel = () => void saveOrderUpdate({ ...order, status: 'Cancelled', adminMessage: 'This order was cancelled by the admin.' });
-  return <Dialog open={Boolean(order)} onOpenChange={onOpenChange}><DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto"><DialogTitle>অর্ডার বিস্তারিত · {order.id}</DialogTitle><div className="grid gap-6 md:grid-cols-2"><div><h3 className="font-bold text-ink-500">পণ্যের বিবরণ</h3><div className="mt-3 space-y-3">{order.items.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-ink-50 p-3"><img src={item.image} alt={item.name} className="h-14 w-14 rounded-xl object-cover" /><div className="flex-1"><b>{item.name}</b><p className="text-sm text-ink-400">{item.quantity} × {money(item.price)}</p></div><b>{money(item.price * item.quantity)}</b></div>)}</div><p className="mt-4 font-display text-2xl font-bold text-palette-orange">মোট: {money(order.total)}</p></div><div className="rounded-2xl bg-ink-50 p-4 text-sm text-ink-500"><h3 className="font-bold">গ্রাহকের বিবরণ</h3><p className="mt-3"><b>নাম:</b> {order.customer.name}</p><p><b>ফোন:</b> {order.customer.phone}</p><p><b>ইমেল:</b> {order.customer.email}</p><p><b>ঠিকানা:</b> {order.customer.address}, {order.customer.city} - {order.customer.pincode}</p><p><b>অর্ডারের তারিখ:</b> {new Date(order.createdAt).toLocaleString('en-IN')}</p><p><b>পেমেন্ট:</b> {order.paymentMethod} · {order.paymentStatus}</p>{order.customer.notes && <p><b>নোট:</b> {order.customer.notes}</p>}</div></div><div className="rounded-2xl border border-ink-100 p-4"><label className="font-bold text-ink-500">ডেলিভারির তারিখ</label><div className="mt-2 flex flex-wrap gap-3"><Input type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} className="max-w-xs" /><Button onClick={confirm} disabled={order.status === 'Cancelled'}>অর্ডার নিশ্চিত করুন</Button><Button variant="outline" onClick={cancel} disabled={order.status === 'Cancelled'}>অর্ডার বাতিল করুন</Button></div><p className="mt-3 text-sm font-semibold text-ink-400">বর্তমান অবস্থা: {order.status}{order.adminMessage ? ` · ${order.adminMessage}` : ''}</p></div></DialogContent></Dialog>;
+  const deliveryMsg = language === 'bn'
+    ? `${productNames} ${new Date(deliveryDate).toLocaleDateString('en-IN')} তারিখে আসছে।`
+    : `${productNames} is coming on ${new Date(deliveryDate).toLocaleDateString('en-IN')}.`;
+  const confirm = () => { if (!deliveryDate) return; void saveOrderUpdate({ ...order, status: 'Confirmed', deliveryDate, adminMessage: deliveryMsg }); };
+  const cancel = () => void saveOrderUpdate({ ...order, status: 'Cancelled', adminMessage: tr('cancelledByAdmin', language) });
+  return <Dialog open={Boolean(order)} onOpenChange={onOpenChange}><DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto"><DialogTitle>{tr('orderDialogTitle', language)} {order.id}</DialogTitle><div className="grid gap-6 md:grid-cols-2"><div><h3 className="font-bold text-ink-500">{tr('productDetailsTitle', language)}</h3><div className="mt-3 space-y-3">{order.items.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-2xl bg-ink-50 p-3"><img src={item.image} alt={item.name} className="h-14 w-14 rounded-xl object-cover" /><div className="flex-1"><b>{item.name}</b><p className="text-sm text-ink-400">{item.quantity} × {money(item.price)}</p></div><b>{money(item.price * item.quantity)}</b></div>)}</div><p className="mt-4 font-display text-2xl font-bold text-palette-orange">{tr('totalLabel', language)} {money(order.total)}</p></div><div className="rounded-2xl bg-ink-50 p-4 text-sm text-ink-500"><h3 className="font-bold">{tr('customerDetailsTitle', language)}</h3><p className="mt-3"><b>{tr('customerNameLabel', language)}</b> {order.customer.name}</p><p><b>{tr('customerPhoneLabel', language)}</b> {order.customer.phone}</p><p><b>{tr('customerEmailLabel', language)}</b> {order.customer.email}</p><p><b>{tr('customerAddressLabel', language)}</b> {order.customer.address}, {order.customer.city} - {order.customer.pincode}</p><p><b>{tr('orderDateLabel', language)}</b> {new Date(order.createdAt).toLocaleString('en-IN')}</p><p><b>{tr('paymentLabel', language)}</b> {order.paymentMethod} · {order.paymentStatus}</p>{order.customer.notes && <p><b>{tr('notesLabel', language)}</b> {order.customer.notes}</p>}</div></div><div className="rounded-2xl border border-ink-100 p-4"><label className="font-bold text-ink-500">{tr('deliveryDateLabel', language)}</label><div className="mt-2 flex flex-wrap gap-3"><Input type="date" value={deliveryDate} onChange={(event) => setDeliveryDate(event.target.value)} className="max-w-xs" /><Button onClick={confirm} disabled={order.status === 'Cancelled'}>{tr('confirmOrder', language)}</Button><Button variant="outline" onClick={cancel} disabled={order.status === 'Cancelled'}>{tr('cancelOrderAction', language)}</Button></div><p className="mt-3 text-sm font-semibold text-ink-400">{tr('currentStatus', language)} {order.status}{order.adminMessage ? ` · ${order.adminMessage}` : ''}</p></div></DialogContent></Dialog>;
 }
 
 const readError = (err: unknown): { message: string; code?: string; details?: string; hint?: string; status?: number } => {
@@ -264,6 +287,7 @@ const ImageField = ({ value, onChange }: { value?: string; onChange: (image: str
 );
 
 function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (items: Course[]) => void }) {
+  const { language } = useLanguage();
   const [editing, setEditing] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -492,16 +516,16 @@ function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (
   };
 
   return (
-    <Panel title="কোর্স পরিচালনা">
+    <Panel title={tr('courseManagement', language)}>
       {error && <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
       <form
         key={editing?.id || 'new'}
         onSubmit={save}
         className="mt-5 grid gap-3 md:grid-cols-2"
       >
-        <Input name="title" defaultValue={editing?.title} placeholder="কোর্সের নাম" required />
-        <Input name="duration" defaultValue={editing?.duration} placeholder="সময়কাল" required />
-        <Input name="fee" type="number" defaultValue={editing?.fee} placeholder="মাসিক ফি" required />
+        <Input name="title" defaultValue={editing?.title} placeholder={tr('courseNamePlaceholder', language)} required />
+        <Input name="duration" defaultValue={editing?.duration} placeholder={tr('durationPlaceholder', language)} required />
+        <Input name="fee" type="number" defaultValue={editing?.fee} placeholder={tr('monthlyFeePlaceholder', language)} required />
         <ImageField
           value={imageDraft}
           onChange={setImageDraft}
@@ -509,17 +533,17 @@ function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (
         <Textarea
           name="description"
           defaultValue={editing?.description}
-          placeholder="কোর্সের বিস্তারিত"
+          placeholder={tr('courseDetailsPlaceholder', language)}
           className="md:col-span-2"
           required
         />
         <div className="md:col-span-2 flex gap-2">
           <Button type="submit" disabled={saving}>
-            {saving ? 'সংরক্ষণ হচ্ছে…' : editing ? 'কোর্স আপডেট করুন' : 'নতুন কোর্স সংরক্ষণ করুন'}
+            {saving ? tr('savingCourse', language) : editing ? tr('updateCourse', language) : tr('saveNewCourse', language)}
           </Button>
           {editing && (
             <Button type="button" variant="outline" onClick={() => { setEditing(null); setImageDraft(emptyImage); }}>
-              বাতিল
+              {tr('cancel', language)}
             </Button>
           )}
         </div>
@@ -532,7 +556,7 @@ function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (
       ) : (
         <ItemGrid
           items={courses}
-          empty="কোনো কোর্স যোগ করা হয়নি।"
+          empty={tr('noCoursesYet', language)}
           render={(course) => (
             <>
               <img
@@ -551,7 +575,7 @@ function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (
                 <div className="flex items-center gap-2">
                   <b>{course.title}</b>
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${course.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                    {course.isActive ? 'ওয়েবসাইটে দেখাচ্ছে' : 'লুকানো'}
+                    {course.isActive ? tr('visibleOnWebsite', language) : tr('hiddenLabel', language)}
                   </span>
                 </div>
                 <p className="text-sm text-ink-400">
@@ -561,16 +585,16 @@ function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (
               </div>
               <button
                 onClick={() => toggleActive(course)}
-                title={course.isActive ? 'ওয়েবসাইট থেকে লুকান' : 'ওয়েবসাইটে দেখান'}
-                aria-label={course.isActive ? 'লুকান' : 'দেখান'}
+                title={course.isActive ? tr('hideFromWebsite', language) : tr('showOnWebsite', language)}
+                aria-label={course.isActive ? tr('hideLabel', language) : tr('showLabel', language)}
                 className={`flex h-9 w-16 items-center rounded-full px-1 transition ${course.isActive ? 'bg-emerald-500' : 'bg-slate-300'}`}
               >
                 <span className={`inline-block h-7 w-7 transform rounded-full bg-white shadow transition ${course.isActive ? 'translate-x-7' : 'translate-x-0'}`} />
               </button>
-              <button onClick={() => { setImageDraft(course.image); setEditing(course); }} aria-label="সম্পাদনা">
+              <button onClick={() => { setImageDraft(course.image); setEditing(course); }} aria-label={tr('edit', language)}>
                 <Pencil className="h-4 w-4 text-palette-purple" />
               </button>
-              <button onClick={() => remove(course.id)} aria-label="মুছুন">
+              <button onClick={() => remove(course.id)} aria-label={tr('delete', language)}>
                 <X className="h-4 w-4 text-rose-500" />
               </button>
             </>
@@ -580,21 +604,37 @@ function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (
     </Panel>
   );
 }
-function EventPanel({ events, setEvents }: { events: Event[]; setEvents: (items: Event[]) => void }) { const [editing, setEditing] = useState<Event | null>(null); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item = { id: editing?.id || id(), title: String(data.title), date: String(data.date), details: String(data.details) }; setEvents(editing ? events.map(value => value.id === item.id ? item : value) : [...events, item]); setEditing(null); event.currentTarget.reset(); }; return <Panel title="ইভেন্ট ও চলমান কোর্স পরিচালনা"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder="ইভেন্ট / কোর্সের নাম" required /><Input name="date" type="date" defaultValue={editing?.date} required /><Textarea name="details" defaultValue={editing?.details} placeholder="সময়, স্থান এবং বিস্তারিত" className="md:col-span-2" required /><Button type="submit">{editing ? 'আপডেট করুন' : 'ইভেন্ট যোগ করুন'}</Button></form><ItemGrid items={events} empty="কোনো ইভেন্ট নেই।" render={item => <><div className="flex-1"><b>{item.title}</b><p className="text-sm text-ink-400">{item.date} · {item.details}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>; }
-function StudentPanel({ students, setStudents }: { students: Student[]; setStudents: (items: Student[]) => void }) { const [village, setVillage] = useState(''); const [editing, setEditing] = useState<Student | null>(null); const filtered = students.filter(student => !village || student.village === village); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item: Student = { id: editing?.id || id(), name: String(data.name), village: String(data.village), phone: String(data.phone), course: String(data.course), monthlyFee: Number(data.monthlyFee), paidMonths: editing?.paidMonths || [] }; setStudents(editing ? students.map(value => value.id === item.id ? item : value) : [...students, item]); setEditing(null); event.currentTarget.reset(); }; const toggleFee = (student: Student, month: string) => setStudents(students.map(value => value.id === student.id ? { ...value, paidMonths: value.paidMonths.includes(month) ? value.paidMonths.filter(value => value !== month) : [...value.paidMonths, month] } : value)); return <Panel title="ছাত্র তালিকা ও মাসিক ফি"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-3"><Input name="name" defaultValue={editing?.name} placeholder="ছাত্রের নাম" required /><Input name="village" defaultValue={editing?.village} placeholder="গ্রাম" required /><Input name="phone" defaultValue={editing?.phone} placeholder="ফোন নম্বর" required /><Input name="course" defaultValue={editing?.course} placeholder="কোর্স" required /><Input name="monthlyFee" type="number" defaultValue={editing?.monthlyFee} placeholder="মাসিক ফি" required /><Button type="submit">{editing ? 'ছাত্র আপডেট করুন' : 'ছাত্র যোগ করুন'}</Button></form><select value={village} onChange={event => setVillage(event.target.value)} className="mt-5 h-11 rounded-xl border border-ink-200 bg-white px-3 text-sm text-ink-500"><option value="">সব গ্রাম</option>{[...new Set(students.map(student => student.village))].map(value => <option key={value}>{value}</option>)}</select><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead className="text-ink-400"><tr><th className="p-2">নাম</th><th>গ্রাম</th><th>কোর্স</th><th>মাসিক ফি</th><th>ফি নিশ্চিত করুন</th><th /></tr></thead><tbody>{filtered.map(student => <tr key={student.id} className="border-t border-ink-100"><td className="p-2 font-semibold">{student.name}<span className="block text-xs font-normal text-ink-400">{student.phone}</span></td><td>{student.village}</td><td>{student.course}</td><td>{money(student.monthlyFee)}</td><td><div className="flex gap-1">{months.map(month => <button title={`${month} fee`} onClick={() => toggleFee(student, month)} key={month} className={`rounded px-2 py-1 text-xs ${student.paidMonths.includes(month) ? 'bg-emerald-100 text-emerald-700' : 'bg-ink-100 text-ink-400'}`}>{month}</button>)}</div></td><td><button onClick={() => setEditing(student)}><Pencil className="h-4 w-4 text-palette-purple" /></button></td></tr>)}</tbody></table></div></Panel>; }
-function BlogPanel({ blogs, setBlogs }: { blogs: Blog[]; setBlogs: (items: Blog[]) => void }) { const [editing, setEditing] = useState<Blog | null>(null); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item: Blog = { id: editing?.id || id(), title: String(data.title), category: String(data.category), content: String(data.content), image: editing?.image || emptyImage, date: editing?.date || new Date().toLocaleDateString('en-GB') }; setBlogs(editing ? blogs.map(value => value.id === item.id ? item : value) : [item, ...blogs]); setEditing(null); event.currentTarget.reset(); }; return <Panel title="ব্লগ পোস্ট লিখুন ও সম্পাদনা করুন"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder="পোস্টের শিরোনাম" required /><Input name="category" defaultValue={editing?.category} placeholder="বিভাগ" required /><ImageField value={editing?.image} onChange={image => setEditing(current => ({ ...(current || { id: '', title: '', category: '', content: '', date: '' }), image }))} /><Textarea name="content" defaultValue={editing?.content} placeholder="ব্লগের লেখা" className="md:col-span-2" required /><Button type="submit">{editing ? 'পোস্ট আপডেট করুন' : 'পোস্ট প্রকাশ করুন'}</Button></form><ItemGrid items={blogs} empty="এখনও কোনো ব্লগ পোস্ট নেই।" render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.title}</b><p className="text-sm text-ink-400">{item.category} · {item.date}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>; }
+function EventPanel({ events, setEvents }: { events: Event[]; setEvents: (items: Event[]) => void }) {
+  const { language } = useLanguage();
+  const [editing, setEditing] = useState<Event | null>(null);
+  const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item = { id: editing?.id || id(), title: String(data.title), date: String(data.date), details: String(data.details) }; setEvents(editing ? events.map(value => value.id === item.id ? item : value) : [...events, item]); setEditing(null); event.currentTarget.reset(); };
+  return <Panel title={tr('eventPanelTitle', language)}><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder={tr('eventTitlePlaceholder', language)} required /><Input name="date" type="date" defaultValue={editing?.date} required /><Textarea name="details" defaultValue={editing?.details} placeholder={tr('eventDetailsPlaceholder', language)} className="md:col-span-2" required /><Button type="submit">{editing ? tr('updateEvent', language) : tr('addEvent', language)}</Button></form><ItemGrid items={events} empty={tr('noEvents', language)} render={item => <><div className="flex-1"><b>{item.title}</b><p className="text-sm text-ink-400">{item.date} · {item.details}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
+}
+function StudentPanel({ students, setStudents }: { students: Student[]; setStudents: (items: Student[]) => void }) {
+  const { language } = useLanguage();
+  const [village, setVillage] = useState(''); const [editing, setEditing] = useState<Student | null>(null); const filtered = students.filter(student => !village || student.village === village); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item: Student = { id: editing?.id || id(), name: String(data.name), village: String(data.village), phone: String(data.phone), course: String(data.course), monthlyFee: Number(data.monthlyFee), paidMonths: editing?.paidMonths || [] }; setStudents(editing ? students.map(value => value.id === item.id ? item : value) : [...students, item]); setEditing(null); event.currentTarget.reset(); }; const toggleFee = (student: Student, month: string) => setStudents(students.map(value => value.id === student.id ? { ...value, paidMonths: value.paidMonths.includes(month) ? value.paidMonths.filter(value => value !== month) : [...value.paidMonths, month] } : value)); return <Panel title="ছাত্র তালিকা ও মাসিক ফি"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-3"><Input name="name" defaultValue={editing?.name} placeholder={tr('studentNamePlaceholder', language)} required /><Input name="village" defaultValue={editing?.village} placeholder={tr('villagePlaceholder', language)} required /><Input name="phone" defaultValue={editing?.phone} placeholder={tr('phonePlaceholder', language)} required /><Input name="course" defaultValue={editing?.course} placeholder={tr('coursePlaceholder', language)} required /><Input name="monthlyFee" type="number" defaultValue={editing?.monthlyFee} placeholder={tr('monthlyFeePlaceholder', language)} required /><Button type="submit">{editing ? tr('updateStudent', language) : tr('addStudent', language)}</Button></form><select value={village} onChange={event => setVillage(event.target.value)} className="mt-5 h-11 rounded-xl border border-ink-200 bg-white px-3 text-sm text-ink-500"><option value="">{tr('allVillages', language)}</option>{[...new Set(students.map(student => student.village))].map(value => <option key={value}>{value}</option>)}</select><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead className="text-ink-400"><tr><th className="p-2">{tr('name', language)}</th><th>{tr('villagePlaceholder', language)}</th><th>{tr('coursePlaceholder', language)}</th><th>{tr('monthlyFeePlaceholder', language)}</th><th>{tr('confirmFeeColumn', language)}</th><th /></tr></thead><tbody>{filtered.map(student => <tr key={student.id} className="border-t border-ink-100"><td className="p-2 font-semibold">{student.name}<span className="block text-xs font-normal text-ink-400">{student.phone}</span></td><td>{student.village}</td><td>{student.course}</td><td>{money(student.monthlyFee)}</td><td><div className="flex gap-1">{months.map(month => <button title={`${month} fee`} onClick={() => toggleFee(student, month)} key={month} className={`rounded px-2 py-1 text-xs ${student.paidMonths.includes(month) ? 'bg-emerald-100 text-emerald-700' : 'bg-ink-100 text-ink-400'}`}>{month}</button>)}</div></td><td><button onClick={() => setEditing(student)}><Pencil className="h-4 w-4 text-palette-purple" /></button></td></tr>)}</tbody></table></div></Panel>;
+}
+function BlogPanel({ blogs, setBlogs }: { blogs: Blog[]; setBlogs: (items: Blog[]) => void }) {
+  const { language } = useLanguage();
+  const [editing, setEditing] = useState<Blog | null>(null); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item: Blog = { id: editing?.id || id(), title: String(data.title), category: String(data.category), content: String(data.content), image: editing?.image || emptyImage, date: editing?.date || new Date().toLocaleDateString('en-GB') }; setBlogs(editing ? blogs.map(value => value.id === item.id ? item : value) : [item, ...blogs]); setEditing(null); event.currentTarget.reset(); }; return <Panel title={tr('blogPosts', language)}><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder={tr('blogTitlePlaceholder', language)} required /><Input name="category" defaultValue={editing?.category} placeholder={tr('blogCategoryPlaceholder', language)} required /><ImageField value={editing?.image} onChange={image => setEditing(current => ({ ...(current || { id: '', title: '', category: '', content: '', date: '' }), image }))} /><Textarea name="content" defaultValue={editing?.content} placeholder={tr('blogContentPlaceholder', language)} className="md:col-span-2" required /><Button type="submit">{editing ? tr('updatePost', language) : tr('publishPost', language)}</Button></form><ItemGrid items={blogs} empty={tr('noBlogPosts', language)} render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.title}</b><p className="text-sm text-ink-400">{item.category} · {item.date}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
+}
 function ProductPanel() {
+  const { language } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]); const [editing, setEditing] = useState<Product | null>(null);
   const load = async () => { const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false }); if (error) { console.error(error); alert(error.message); return; } setProducts((data ?? []).map((p) => ({ id: p.id, name: p.name, category: p.category, price: Number(p.price), stock: p.stock ?? 0, image: p.image || emptyImage }))); };
   useEffect(() => { void load(); }, []);
   const save = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = Object.fromEntries(new FormData(event.currentTarget)); const item = { id: editing?.id || id(), name: String(form.name), category: String(form.category), price: Number(form.price), stock: Number(form.stock), image: editing?.image || emptyImage }; const query = editing ? supabase.from('products').update(item).eq('id', item.id).select() : supabase.from('products').insert(item).select(); const { error } = await query; if (error) { console.error(error); alert(error.message); throw error; } setEditing(null); event.currentTarget.reset(); await load(); };
-  return <Panel title="পণ্য ম্যানেজমেন্ট"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="name" defaultValue={editing?.name} placeholder="পণ্যের নাম" required /><Input name="category" defaultValue={editing?.category} placeholder="বিভাগ" required /><Input name="price" type="number" defaultValue={editing?.price} placeholder="মূল্য" required /><Input name="stock" type="number" defaultValue={editing?.stock} placeholder="স্টক" required /><ImageField value={editing?.image} onChange={image => setEditing(current => ({ ...(current || { id: '', name: '', category: '', price: 0, stock: 0 }), image }))} /><Button type="submit">{editing ? 'পণ্য আপডেট করুন' : 'পণ্য যোগ করুন'}</Button></form><ItemGrid items={products} empty="এখনও কোনো পণ্য যোগ করা হয়নি।" render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.name}</b><p className="text-sm text-ink-400">{item.category} · {money(item.price)} · স্টক {item.stock}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
+  return <Panel title={tr('productManagement', language)}><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="name" defaultValue={editing?.name} placeholder={tr('productNamePlaceholder', language)} required /><Input name="category" defaultValue={editing?.category} placeholder={tr('productCategoryPlaceholder', language)} required /><Input name="price" type="number" defaultValue={editing?.price} placeholder={tr('pricePlaceholder', language)} required /><Input name="stock" type="number" defaultValue={editing?.stock} placeholder={tr('stockPlaceholder', language)} required /><ImageField value={editing?.image} onChange={image => setEditing(current => ({ ...(current || { id: '', name: '', category: '', price: 0, stock: 0 }), image }))} /><Button type="submit">{editing ? tr('updateProduct', language) : tr('addProduct', language)}</Button></form><ItemGrid items={products} empty={tr('noProducts', language)} render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.name}</b><p className="text-sm text-ink-400">{item.category} · {money(item.price)} · {tr('stockPlaceholder', language)} {item.stock}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
 }
 function ItemGrid<T>({ items, empty, render }: { items: T[]; empty: string; render: (item: T) => React.ReactNode }) { return <div className="mt-6 space-y-3">{items.length ? items.map((item, index) => <div key={(item as { id: string }).id || index} className="flex items-center gap-3 rounded-2xl bg-ink-50 p-4">{render(item)}</div>) : <p className="rounded-2xl bg-ink-50 p-4 text-ink-400">{empty}</p>}</div>; }
-function Reports({ orders, students, products }: { orders: Order[]; students: Student[]; products: Product[] }) { const feeIncome = students.reduce((sum, student) => sum + student.monthlyFee * student.paidMonths.length, 0); const productIncome = orders.reduce((sum, order) => sum + order.total, 0); const uninterrupted = students.filter(student => months.every(month => student.paidMonths.includes(month))); const topProduct = [...products].sort((a, b) => a.stock - b.stock)[0]; const max = Math.max(feeIncome, productIncome, 1); return <Panel title="রিপোর্ট"><div className="mt-5 grid gap-4 md:grid-cols-2"><ReportCard title="কাস্টমার রিপোর্ট" value={`${orders.length} অর্ডার`} note="মোট অনলাইন ক্রেতা ও অর্ডার" icon={<Users />} /><ReportCard title="পণ্য রিপোর্ট" value={topProduct?.name || 'ডেটা নেই'} note="স্টক অনুযায়ী জনপ্রিয় পণ্য" icon={<Package />} /><ReportCard title="ছাত্র রিপোর্ট" value={`${uninterrupted.length} নিয়মিত`} note="সব মাসে ফি প্রদানকারী ছাত্র" icon={<CheckCircle2 />} /><ReportCard title="আয় রিপোর্ট" value={money(feeIncome + productIncome)} note="ফি ও পণ্য বিক্রির সম্মিলিত আয়" icon={<BarChart3 />} /></div><div className="mt-6 rounded-2xl bg-ink-50 p-5"><h3 className="font-display text-xl font-bold text-ink-500">আয়ের তুলনা</h3>{[['ছাত্রদের মাসিক ফি', feeIncome, '#8B5CF6'], ['পণ্য বিক্রি', productIncome, '#FF6B35']].map(([label, value, color]) => <div key={String(label)} className="mt-4"><div className="mb-1 flex justify-between font-bold text-ink-500"><span>{label}</span><span>{money(Number(value))}</span></div><div className="h-4 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full" style={{ width: `${(Number(value) / max) * 100}%`, backgroundColor: String(color) }} /></div></div>)}<p className="mt-5 font-bold text-ink-500">বেশি আয়: {feeIncome >= productIncome ? 'ছাত্রদের ফি' : 'পণ্য বিক্রি'} থেকে</p></div></Panel>; }
+function Reports({ orders, students, products }: { orders: Order[]; students: Student[]; products: Product[] }) {
+  const { language } = useLanguage();
+  const feeIncome = students.reduce((sum, student) => sum + student.monthlyFee * student.paidMonths.length, 0); const productIncome = orders.reduce((sum, order) => sum + order.total, 0); const uninterrupted = students.filter(student => months.every(month => student.paidMonths.includes(month))); const topProduct = [...products].sort((a, b) => a.stock - b.stock)[0]; const max = Math.max(feeIncome, productIncome, 1); return <Panel title={tr('reports', language)}><div className="mt-5 grid gap-4 md:grid-cols-2"><ReportCard title={tr('customerReport', language)} value={`${orders.length} ${tr('totalOrdersColumn', language)}`} note={tr('customerReportNote', language)} icon={<Users />} /><ReportCard title={tr('productReport', language)} value={topProduct?.name || tr('noData', language)} note={tr('productReportNote', language)} icon={<Package />} /><ReportCard title={tr('studentReport', language)} value={`${uninterrupted.length} ${language === 'bn' ? 'নিয়মিত' : 'consistent'}`} note={tr('studentReportNote', language)} icon={<CheckCircle2 />} /><ReportCard title={tr('incomeReport', language)} value={money(feeIncome + productIncome)} note={`${tr('studentFeeIncome', language)} & ${tr('productSalesIncome', language)}`} icon={<BarChart3 />} /></div><div className="mt-6 rounded-2xl bg-ink-50 p-5"><h3 className="font-display text-xl font-bold text-ink-500">{tr('incomeComparison', language)}</h3>{[[tr('studentFeeIncome', language), feeIncome, '#8B5CF6'], [tr('productSalesIncome', language), productIncome, '#FF6B35']].map(([label, value, color]) => <div key={String(label)} className="mt-4"><div className="mb-1 flex justify-between font-bold text-ink-500"><span>{label}</span><span>{money(Number(value))}</span></div><div className="h-4 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full" style={{ width: `${(Number(value) / max) * 100}%`, backgroundColor: String(color) }} /></div></div>)}<p className="mt-5 font-bold text-ink-500">{tr('higherIncome', language)} {feeIncome >= productIncome ? tr('higherIncomeStudent', language) : tr('higherIncomeProduct', language)} {language === 'bn' ? 'থেকে' : ''}</p></div></Panel>;
+}
 function ReportCard({ title, value, note, icon }: { title: string; value: string; note: string; icon: React.ReactNode }) { return <div className="rounded-2xl bg-gradient-to-br from-cream-200 to-white p-5"><div className="flex items-center gap-2 text-palette-purple">{icon}<b>{title}</b></div><div className="mt-4 font-display text-2xl font-bold text-ink-500">{value}</div><p className="mt-1 text-sm text-ink-400">{note}</p></div>; }
 
 function SettingsPanel({ userId }: { userId: string }) {
+  const { language } = useLanguage();
   const [upiId, setUpiId] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [loading, setLoading] = useState(true);
@@ -642,7 +682,7 @@ function SettingsPanel({ userId }: { userId: string }) {
       if (fetchError) {
         // Handle empty error - likely table doesn't exist
         console.warn('Profile fetch returned error:', fetchError);
-        setMessage({ type: 'error', text: 'ডেটাবেস সংযোগ সমস্যা। অনুগ্রহ করে Supabase টেবিল তৈরি করুন।' });
+        setMessage({ type: 'error', text: tr('dbConnectionIssue', language) });
         setSaving(false);
         return;
       }
@@ -670,10 +710,10 @@ function SettingsPanel({ userId }: { userId: string }) {
         }
       }
 
-      setMessage({ type: 'success', text: 'UPI সেটিংস সফলভাবে সংরক্ষিত হয়েছে!' });
+      setMessage({ type: 'success', text: tr('upiSaved', language) });
     } catch (err) {
       console.error('Error saving settings:', err);
-      const errorMessage = err instanceof Error ? err.message : 'সেটিংস সংরক্ষণে সমস্যা হয়েছে।';
+      const errorMessage = err instanceof Error ? err.message : tr('settingsSaveFailed', language);
       setMessage({ type: 'error', text: errorMessage });
     } finally {
       setSaving(false);
@@ -681,19 +721,19 @@ function SettingsPanel({ userId }: { userId: string }) {
   };
 
   if (loading) {
-    return <Panel title="UPI সেটিংস"><div className="flex items-center justify-center p-8"><div className="h-8 w-8 animate-spin rounded-full border-4 border-palette-purple border-t-transparent" /></div></Panel>;
+    return <Panel title={tr('upiTitle', language)}><div className="flex items-center justify-center p-8"><div className="h-8 w-8 animate-spin rounded-full border-4 border-palette-purple border-t-transparent" /></div></Panel>;
   }
 
   return (
-    <Panel title="UPI পেমেন্ট সেটিংস">
+    <Panel title={tr('upiTitle', language)}>
       <div className="mt-5 rounded-2xl bg-gradient-to-r from-orange-50 to-pink-50 p-4">
         <div className="flex items-start gap-3">
           <div className="rounded-full bg-orange-100 p-2">
             <CreditCard className="h-5 w-5 text-orange-600" />
           </div>
           <div>
-            <h4 className="font-bold text-orange-800">UPI পেমেন্ট সেটিংস</h4>
-            <p className="mt-1 text-sm text-orange-700">এখানে আপনার UPI ID সেট করুন। গ্রাহকরা এই UPI-তে পেমেন্ট করবেন এবং QR কোড স্বয়ংক্রিয়ভাবে তৈরি হবে।</p>
+            <h4 className="font-bold text-orange-800">{tr('upiTitle', language)}</h4>
+            <p className="mt-1 text-sm text-orange-700">{tr('upiIntro', language)}</p>
           </div>
         </div>
       </div>
@@ -702,27 +742,27 @@ function SettingsPanel({ userId }: { userId: string }) {
         <div>
           <label className="block text-sm font-bold text-ink-500 mb-2">
             <DollarSign className="inline h-4 w-4 mr-1" />
-            আপনার UPI ID
+            {tr('upiIdLabel', language)}
           </label>
           <Input
             type="text"
             value={upiId}
             onChange={(e) => setUpiId(e.target.value)}
-            placeholder="উদাহরণ: loknathartcenter@okhdfcbank"
+            placeholder={tr('upiIdPlaceholder', language)}
             required
           />
-          <p className="mt-1 text-xs text-ink-400">আপনার UPI অ্যাপ থেকে পাওয়া UPI ID (যেমন: name@bankname)</p>
+          <p className="mt-1 text-xs text-ink-400">{tr('upiIdHint', language)}</p>
         </div>
 
         <div>
           <label className="block text-sm font-bold text-ink-500 mb-2">
-            ব্যবসার নাম (QR কোডে দেখাবে)
+            {tr('businessNameLabel', language)}
           </label>
           <Input
             type="text"
             value={businessName}
             onChange={(e) => setBusinessName(e.target.value)}
-            placeholder="Lokenath Art Center"
+            placeholder={tr('businessNamePlaceholder', language)}
           />
         </div>
 
@@ -730,10 +770,10 @@ function SettingsPanel({ userId }: { userId: string }) {
           <div className="rounded-2xl bg-emerald-50 p-4">
             <div className="flex items-center gap-2 text-emerald-700">
               <CheckCircle2 className="h-5 w-5" />
-              <span className="font-bold">পূর্বরূপ</span>
+              <span className="font-bold">{tr('upiPreview', language)}</span>
             </div>
             <p className="mt-2 text-sm text-emerald-600">
-              QR কোডে দেখাবে: <strong>{upiId}</strong>
+              {tr('upiPreviewShows', language)} <strong>{upiId}</strong>
             </p>
           </div>
         )}
@@ -745,17 +785,17 @@ function SettingsPanel({ userId }: { userId: string }) {
         )}
 
         <Button type="submit" disabled={saving}>
-          {saving ? 'সংরক্ষণ হচ্ছে...' : 'সেটিংস সংরক্ষণ করুন'}
+          {saving ? `${tr('saving', language)}` : tr('saveSettings', language)}
         </Button>
       </form>
 
       <div className="mt-6 rounded-2xl bg-blue-50 p-4">
-        <h4 className="font-bold text-blue-700">কিভাবে কাজ করে?</h4>
+        <h4 className="font-bold text-blue-700">{tr('howItWorks', language)}</h4>
         <ol className="mt-2 space-y-2 text-sm text-blue-600">
-          <li>1. উপরে আপনার UPI ID দিন (যেমন: yourname@oksbi)</li>
-          <li>2. সেটিংস সংরক্ষণ করুন</li>
-          <li>3. গ্রাহকরা QR স্ক্যান করে পেমেন্ট করতে পারবেন</li>
-          <li>4. টাকা সরাসরি আপনার ব্যাংক অ্যাকাউন্টে যাবে</li>
+          <li>{tr('howItWorksStep1', language)}</li>
+          <li>{tr('howItWorksStep2', language)}</li>
+          <li>{tr('howItWorksStep3', language)}</li>
+          <li>{tr('howItWorksStep4', language)}</li>
         </ol>
       </div>
     </Panel>

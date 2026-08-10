@@ -11,16 +11,22 @@ import { shopFeatures, storeCategories, products } from '@/lib/data';
 import { formatPrice, cn } from '@/lib/utils';
 import { showToast } from '@/components/ui/toaster';
 import { useAuth } from '@/components/auth/auth-context';
+import { useLanguage } from '@/lib/i18n/context';
+import { tr, ui } from '@/lib/i18n/strings';
 
 const badgeStyles: Record<string, string> = {
   'সর্বাধিক বিক্রিত': 'bg-palette-orange text-white',
+  'Best Seller': 'bg-palette-orange text-white',
   'নতুন আগমন': 'bg-palette-purple text-white',
+  'New Arrival': 'bg-palette-purple text-white',
   'সীমিত অফার': 'bg-palette-rose text-white',
+  'Limited Offer': 'bg-palette-rose text-white',
 };
 
 export function Store() {
   const [emblaRef] = useEmblaCarousel({ loop: true, align: 'start' });
   const { user } = useAuth();
+  const { t, language } = useLanguage();
   return (
     <section id="store" className="relative overflow-hidden section-pad">
       <div className="pointer-events-none absolute -left-40 top-20 h-96 w-96 rounded-full bg-palette-orange/10 blur-3xl" />
@@ -28,28 +34,35 @@ export function Store() {
 
       <div className="container">
         <SectionHeading
-          eyebrow="নতুন! আর্ট স্টোর"
+          eyebrow={tr('storeEyebrow', language)}
           title={
-            <>
-              প্রিমিয়াম সরঞ্জাম,{' '}
-              <span className="brush-underline">সাশ্রয়ী মূল্যে</span>
-            </>
+            language === 'bn' ? (
+              <>
+                প্রিমিয়াম সরঞ্জাম,{' '}
+                <span className="brush-underline">সাশ্রয়ী মূল্যে</span>
+              </>
+            ) : (
+              <>
+                Premium supplies,{' '}
+                <span className="brush-underline">fair prices</span>
+              </>
+            )
           }
-          description="একই শিল্পীর কাছ থেকে যিনি আপনার সন্তানদের শেখান। ছাত্র-ছাত্রী, শখের শিল্পী ও পেশাদারদের জন্য বাছাই করা সরঞ্জাম।"
+          description={tr('storeDescription', language)}
         />
 
         {/* Category pills */}
         <div className="mb-10 flex flex-wrap items-center justify-center gap-2">
           {storeCategories.slice(0, 12).map((c) => (
             <button
-              key={c}
+              key={c.en}
               className="rounded-full bg-white/70 px-4 py-1.5 text-xs font-medium text-ink-500 backdrop-blur-sm transition hover:bg-palette-orange hover:text-white"
             >
-              {c}
+              {t(c)}
             </button>
           ))}
           <Link href="/store" className="rounded-full bg-ink-500 px-4 py-1.5 text-xs font-medium text-white hover:bg-ink-600">
-            সব দেখুন →
+            {tr('viewAll', language)} →
           </Link>
         </div>
 
@@ -71,13 +84,13 @@ export function Store() {
                       <span
                         className={cn(
                           'absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-md',
-                          badgeStyles[p.badge]
+                          badgeStyles[t(p.badge)]
                         )}
                       >
-                        {p.badge === 'সর্বাধিক বিক্রিত' && <BadgeCheck className="h-3 w-3" />}
-                        {p.badge === 'নতুন আগমন' && <Sparkles className="h-3 w-3" />}
-                        {p.badge === 'সীমিত অফার' && <Zap className="h-3 w-3" />}
-                        {p.badge}
+                        {t(p.badge) === 'সর্বাধিক বিক্রিত' && <BadgeCheck className="h-3 w-3" />}
+                        {t(p.badge) === 'নতুন আগমন' && <Sparkles className="h-3 w-3" />}
+                        {t(p.badge) === 'সীমিত অফার' && <Zap className="h-3 w-3" />}
+                        {t(p.badge)}
                       </span>
                     )}
 
@@ -87,10 +100,10 @@ export function Store() {
                       onClick={(e) => {
                         e.stopPropagation();
                         if (!user) {
-                          showToast({ title: 'ইচ্ছেতালিকায় যোগ করতে লগইন করুন' });
+                          showToast({ title: tr('addToWishlistLogin', language) });
                           return;
                         }
-                        showToast({ title: `${p.name} সংরক্ষিত!`, variant: 'success' });
+                        showToast({ title: `${t(p.name)} ${tr('savedToWishlist', language)}!`, variant: 'success' });
                       }}
                       className="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-full bg-white/90 text-ink-400 backdrop-blur-sm transition hover:text-palette-rose"
                     >
@@ -101,7 +114,7 @@ export function Store() {
                     <div className="relative aspect-square overflow-hidden bg-cream-200">
                       <img
                         src={p.image}
-                        alt={p.name}
+                        alt={t(p.name)}
                         className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         loading="lazy"
                       />
@@ -110,10 +123,10 @@ export function Store() {
                     {/* Body */}
                     <div className="p-5">
                       <p className="text-xs uppercase tracking-widest text-palette-orange">
-                        {p.category}
+                        {t(p.category)}
                       </p>
                       <h3 className="mt-1 line-clamp-2 font-display font-bold text-ink-500">
-                        {p.name}
+                        {t(p.name)}
                       </h3>
 
                       <div className="mt-2 flex items-center gap-1 text-xs">
@@ -133,7 +146,7 @@ export function Store() {
                         )}
                         {p.originalPrice && (
                           <span className="ml-auto rounded-full bg-palette-orange/10 px-2 py-0.5 text-xs font-semibold text-palette-orange">
-                            {Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)}% ছাড়
+                            {Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)}{tr('percentOff', language)}
                           </span>
                         )}
                       </div>
@@ -142,15 +155,15 @@ export function Store() {
                         <button
                           onClick={() =>
                             showToast({
-                              title: 'কার্টে যোগ হয়েছে',
-                              description: p.name,
+                              title: tr('addedToCart', language),
+                              description: t(p.name),
                               variant: 'success',
                             })
                           }
                           className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-palette-orange to-palette-rose px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-palette-orange/30 transition hover:shadow-palette-orange/50"
                         >
                           <ShoppingCart className="h-4 w-4" />
-                          কার্টে যোগ করুন
+                          {tr('addToCartCta', language)}
                         </button>
                       </div>
                     </div>
@@ -166,7 +179,7 @@ export function Store() {
             href="/store"
             className="inline-flex items-center gap-2 rounded-full border-2 border-palette-purple bg-white px-8 py-3 font-semibold text-palette-purple transition hover:bg-palette-purple hover:text-white"
           >
-            সম্পূর্ণ স্টোর দেখুন
+            {tr('viewFullStore', language)}
             <Sparkles className="h-4 w-4" />
           </Link>
         </div>
@@ -175,7 +188,7 @@ export function Store() {
         <div className="mt-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-6">
           {shopFeatures.map((f, i) => (
             <motion.div
-              key={f.title}
+              key={f.title.en}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -191,8 +204,8 @@ export function Store() {
                   return <Icon className="h-5 w-5" style={{ color: f.color }} />;
                 })()}
               </div>
-              <h4 className="mt-3 text-sm font-bold text-ink-500">{f.title}</h4>
-              <p className="mt-1 text-xs leading-relaxed text-ink-400">{f.desc}</p>
+              <h4 className="mt-3 text-sm font-bold text-ink-500">{t(f.title)}</h4>
+              <p className="mt-1 text-xs leading-relaxed text-ink-400">{t(f.desc)}</p>
             </motion.div>
           ))}
         </div>

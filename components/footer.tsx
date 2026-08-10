@@ -8,17 +8,19 @@ import { Input } from '@/components/ui/input';
 import { showToast } from '@/components/ui/toaster';
 import { navLinks, storeCategories, footerContent } from '@/lib/data';
 import { useAuth } from '@/components/auth/auth-context';
+import { useLanguage } from '@/lib/i18n/context';
 
 export function Footer() {
   const { openLogin } = useAuth();
+  const { t } = useLanguage();
   const onSubscribe = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const email = data.get('email') as string;
     if (!email) return;
     showToast({
-      title: footerContent.newsletter.success,
-      description: footerContent.newsletter.successDesc,
+      title: t(footerContent.newsletter.success),
+      description: t(footerContent.newsletter.successDesc),
       variant: 'success',
     });
     e.currentTarget.reset();
@@ -56,12 +58,12 @@ export function Footer() {
               <div>
                 <div className="font-display text-2xl font-bold">{footerContent.brand}</div>
                 <div className="text-xs uppercase tracking-[0.18em] text-palette-orange">
-                  {footerContent.brandSub}
+                  {t(footerContent.brandSub)}
                 </div>
               </div>
             </Link>
             <p className="mt-5 max-w-md leading-relaxed text-cream-100/80">
-              {footerContent.description}
+              {t(footerContent.description)}
             </p>
 
             <form
@@ -72,16 +74,16 @@ export function Footer() {
                 type="email"
                 name="email"
                 required
-                placeholder={footerContent.newsletter.placeholder}
+                placeholder={t(footerContent.newsletter.placeholder)}
                 className="border-white/20 bg-white/10 text-cream-100 placeholder:text-cream-100/50"
               />
               <Button type="submit">
                 <Send className="h-4 w-4" />
-                {footerContent.newsletter.button}
+                {t(footerContent.newsletter.button)}
               </Button>
             </form>
             <p className="mt-3 text-xs text-cream-100/60">
-              {footerContent.newsletter.note}
+              {t(footerContent.newsletter.note)}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
@@ -89,13 +91,13 @@ export function Footer() {
                 onClick={() => openLogin('login', 'customer')}
                 className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/20"
               >
-                Customer Login
+                {t(footerContent.customerLogin)}
               </button>
               <button
                 onClick={() => openLogin('login', 'admin')}
                 className="rounded-full border border-palette-purple/50 bg-palette-purple/20 px-4 py-2 text-xs font-semibold text-white transition hover:bg-palette-purple/30"
               >
-                Admin Login
+                {t(footerContent.adminLogin)}
               </button>
             </div>
           </div>
@@ -103,7 +105,7 @@ export function Footer() {
           {/* Quick Links */}
           <div className="lg:col-span-2">
             <h4 className="mb-4 text-sm font-bold uppercase tracking-widest text-palette-orange">
-              {footerContent.explore}
+              {t(footerContent.explore)}
             </h4>
             <ul className="space-y-2">
               {navLinks.slice(0, 6).map((l) => (
@@ -112,7 +114,7 @@ export function Footer() {
                     href={l.href}
                     className="text-sm text-cream-100/80 transition hover:text-palette-orange"
                   >
-                    {l.label}
+                    {t(l.label)}
                   </Link>
                 </li>
               ))}
@@ -122,16 +124,16 @@ export function Footer() {
           {/* Store Categories */}
           <div className="lg:col-span-2">
             <h4 className="mb-4 text-sm font-bold uppercase tracking-widest text-palette-orange">
-              {footerContent.store}
+              {t(footerContent.store)}
             </h4>
             <ul className="space-y-2">
               {storeCategories.slice(0, 6).map((c) => (
-                <li key={c}>
+                <li key={c.en}>
                   <Link
                     href="#store"
                     className="text-sm text-cream-100/80 transition hover:text-palette-orange"
                   >
-                    {c}
+                    {t(c)}
                   </Link>
                 </li>
               ))}
@@ -141,12 +143,12 @@ export function Footer() {
           {/* Contact */}
           <div className="lg:col-span-3">
             <h4 className="mb-4 text-sm font-bold uppercase tracking-widest text-palette-orange">
-              {footerContent.reach}
+              {t(footerContent.reach)}
             </h4>
             <ul className="space-y-3 text-sm text-cream-100/80">
               <li className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 text-palette-orange" />
-                <span>{footerContent.address}</span>
+                <span>{t(footerContent.address)}</span>
               </li>
               <li>
                 <a href="tel:+919876543210" className="flex items-center gap-3 hover:text-palette-orange">
@@ -185,19 +187,19 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-6 sm:flex-row">
-          <p className="text-sm text-cream-100/60">{footerContent.copyright}</p>
+          <p className="text-sm text-cream-100/60">{t(footerContent.copyright)}</p>
           <div className="flex items-center gap-5 text-sm text-cream-100/60">
             <Link href="#" className="hover:text-palette-orange">
-              {footerContent.privacy}
+              {t(footerContent.privacy)}
             </Link>
             <Link href="#" className="hover:text-palette-orange">
-              {footerContent.terms}
+              {t(footerContent.terms)}
             </Link>
             <Link
               href="#home"
               className="inline-flex items-center gap-1 text-palette-orange hover:underline"
             >
-              {footerContent.backToTop} <ArrowUpRight className="h-3.5 w-3.5" />
+              {t(footerContent.backToTop)} <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>

@@ -7,13 +7,16 @@ import { Input, Textarea } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { showToast } from '@/components/ui/toaster';
 import { contactInfo } from '@/lib/data';
+import { useLanguage } from '@/lib/i18n/context';
+import { tr, ui } from '@/lib/i18n/strings';
 
 export function Contact() {
+  const { t, language } = useLanguage();
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     showToast({
-      title: 'বার্তা পাঠানো হয়েছে!',
-      description: 'আমরা ২৪ ঘণ্টার মধ্যে আপনার সাথে যোগাযোগ করব।',
+      title: tr('contactFormSentToast', language),
+      description: tr('contactFormSentDescription', language),
       variant: 'success',
     });
     e.currentTarget.reset();
@@ -23,13 +26,19 @@ export function Contact() {
     <section id="contact" className="relative section-pad">
       <div className="container">
         <SectionHeading
-          eyebrow="যোগাযোগ করুন"
+          eyebrow={t(contactInfo.badge)}
           title={
-            <>
-              একটি <span className="brush-underline">সৃজনশীল</span> যাত্রা শুরু করুন
-            </>
+            language === 'bn' ? (
+              <>
+                একটি <span className="brush-underline">সৃজনশীল</span> যাত্রা শুরু করুন
+              </>
+            ) : (
+              <>
+                Start a <span className="brush-underline">creative</span> journey
+              </>
+            )
           }
-          description={contactInfo.description}
+          description={t(contactInfo.description)}
         />
 
         <div className="grid gap-8 lg:grid-cols-5">
@@ -39,7 +48,7 @@ export function Contact() {
               const Icon = (require('lucide-react') as any)[c.icon] ?? MapPin;
               return (
                 <motion.div
-                  key={c.title}
+                  key={`${c.icon}-${i}`}
                   initial={{ opacity: 0, x: -20 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
@@ -53,10 +62,10 @@ export function Contact() {
                     <Icon className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-ink-500">{c.title}</h4>
+                    <h4 className="font-bold text-ink-500">{t(c.title)}</h4>
                     {c.lines.map((l, index) => (
-                      <p key={`${l}-${index}`} className="text-sm text-ink-400">
-                        {l}
+                      <p key={`${index}-${language}`} className="text-sm text-ink-400">
+                        {t(l)}
                       </p>
                     ))}
                   </div>
@@ -96,48 +105,48 @@ export function Contact() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-ink-500">
-                    {contactInfo.form.name}
+                    {t(contactInfo.form.name)}
                   </label>
-                  <Input name="name" required placeholder={contactInfo.form.placeholders.name} />
+                  <Input name="name" required placeholder={t(contactInfo.form.placeholders.name)} />
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-ink-500">
-                    {contactInfo.form.phone}
+                    {t(contactInfo.form.phone)}
                   </label>
-                  <Input name="phone" type="tel" required placeholder={contactInfo.form.placeholders.phone} />
+                  <Input name="phone" type="tel" required placeholder={t(contactInfo.form.placeholders.phone)} />
                 </div>
               </div>
               <div className="mt-4">
                 <label className="mb-2 block text-sm font-semibold text-ink-500">
-                  {contactInfo.form.email}
+                  {t(contactInfo.form.email)}
                 </label>
-                <Input name="email" type="email" required placeholder={contactInfo.form.placeholders.email} />
+                <Input name="email" type="email" required placeholder={t(contactInfo.form.placeholders.email)} />
               </div>
               <div className="mt-4">
                 <label className="mb-2 block text-sm font-semibold text-ink-500">
-                  {contactInfo.form.course}
+                  {t(contactInfo.form.course)}
                 </label>
                 <select
                   name="course"
                   className="flex h-12 w-full rounded-2xl border border-ink-200 bg-white/70 px-4 text-base text-ink-500 focus-visible:border-palette-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-palette-orange/30"
                 >
-                  <option>একটি কোর্স নির্বাচন করুন</option>
-                  <option>বেসিক ড্রয়িং</option>
-                  <option>ওয়াটারকালার পেইন্টিং</option>
-                  <option>অয়েল পেইন্টিং</option>
-                  <option>পোর্ট্রেট ড্রয়িং</option>
-                  <option>কিডস আর্ট</option>
-                  <option>প্রফেশনাল ফাইন আর্টস</option>
+                  <option>{language === 'bn' ? 'একটি কোর্স নির্বাচন করুন' : 'Select a course'}</option>
+                  <option>{language === 'bn' ? 'বেসিক ড্রয়িং' : 'Basic Drawing'}</option>
+                  <option>{language === 'bn' ? 'ওয়াটারকালার পেইন্টিং' : 'Watercolour Painting'}</option>
+                  <option>{language === 'bn' ? 'অয়েল পেইন্টিং' : 'Oil Painting'}</option>
+                  <option>{language === 'bn' ? 'পোর্ট্রেট ড্রয়িং' : 'Portrait Drawing'}</option>
+                  <option>{language === 'bn' ? 'কিডস আর্ট' : 'Kids Art'}</option>
+                  <option>{language === 'bn' ? 'প্রফেশনাল ফাইন আর্টস' : 'Professional Fine Arts'}</option>
                 </select>
               </div>
               <div className="mt-4">
                 <label className="mb-2 block text-sm font-semibold text-ink-500">
-                  {contactInfo.form.message}
+                  {t(contactInfo.form.message)}
                 </label>
-                <Textarea name="message" placeholder={contactInfo.form.placeholders.message} />
+                <Textarea name="message" placeholder={t(contactInfo.form.placeholders.message)} />
               </div>
               <Button type="submit" className="mt-5 w-full" size="lg">
-                {contactInfo.form.submit} <Send className="h-4 w-4" />
+                {t(contactInfo.form.submit)} <Send className="h-4 w-4" />
               </Button>
             </motion.form>
 

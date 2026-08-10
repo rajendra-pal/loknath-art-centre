@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 // import { useTheme } from '@/components/theme-provider';
 import { useAuth } from '@/components/auth/auth-context';
 import { AuthButton } from '@/components/auth/auth-button';
+import { useLanguage } from '@/lib/i18n/context';
+import { tr } from '@/lib/i18n/strings';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
@@ -19,14 +21,15 @@ export function Navbar() {
   const [activeHref, setActiveHref] = React.useState('#home');
   // const { resolvedTheme, setTheme } = useTheme();
   const { openLogin } = useAuth();
+  const { t, language } = useLanguage();
   const pathname = usePathname();
   const { scrollY } = useScroll();
   const isStorePage = pathname.startsWith('/store');
   const displayedNavLinks = isStorePage
     ? [
-        { label: 'Home', href: '/#home' },
-        { label: 'Art Store', href: '/store' },
-        { label: 'Contact', href: '/#contact' },
+        { label: { en: 'Home', bn: 'হোম' }, href: '/#home' },
+        { label: { en: 'Art Store', bn: 'আর্ট স্টোর' }, href: '/store' },
+        { label: { en: 'Contact', bn: 'যোগাযোগ' }, href: '/#contact' },
       ]
     : navLinks;
   const isLinkActive = (href: string) =>
@@ -132,7 +135,7 @@ export function Navbar() {
                     isActive && (isStorePage ? 'text-palette-purple' : 'text-palette-orange')
                   )}
                 >
-                  <span>{link.label}</span>
+                  <span>{t(link.label)}</span>
                   <span
                     className={cn(
                       'absolute left-3 right-3 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full bg-gradient-to-r from-palette-orange to-palette-rose transition-transform duration-300 group-hover:scale-x-100',
@@ -165,7 +168,7 @@ export function Navbar() {
           <AuthButton />
           <Button size="sm" onClick={() => openLogin('register', 'customer')}>
             <Sparkles className="h-4 w-4" />
-            Enroll Now
+            {tr('enrollNowCta', language)}
           </Button>
         </div>
 
@@ -217,7 +220,7 @@ export function Navbar() {
                           (isStorePage ? 'bg-white text-palette-purple' : 'bg-white text-palette-orange')
                       )}
                     >
-                      {link.label}
+                      {t(link.label)}
                       <span className="text-palette-orange">→</span>
                     </Link>
                   </motion.li>
@@ -233,7 +236,7 @@ export function Navbar() {
                 </a>
                 <Button onClick={() => { openLogin('register', 'customer'); setOpen(false); }}>
                   <Sparkles className="h-4 w-4" />
-                  Enroll Now
+                  {tr('enrollNowCta', language)}
                 </Button>
               </div>
             </div>

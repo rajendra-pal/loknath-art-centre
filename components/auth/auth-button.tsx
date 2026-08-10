@@ -6,9 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { useLanguage } from '@/lib/i18n/context';
+import { tr } from '@/lib/i18n/strings';
 
 export function AuthButton() {
   const { user, openLogin, logout } = useAuth();
+  const { language } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -28,7 +31,7 @@ export function AuthButton() {
           className="flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-ink-500 backdrop-blur transition hover:bg-white hover:text-palette-orange"
         >
           <LogIn className="h-4 w-4" />
-          <span className="hidden sm:inline">Login</span>
+          <span className="hidden sm:inline">{tr('login', language)}</span>
         </button>
       </div>
     );
@@ -74,7 +77,7 @@ export function AuthButton() {
                 )}
               >
                 {user.role === 'admin' ? <ShieldCheck className="h-3 w-3" /> : <UserIcon className="h-3 w-3" />}
-                {user.role === 'admin' ? 'Admin' : 'Customer'}
+                {user.role === 'admin' ? tr('adminBadge', language) : tr('customerBadge', language)}
               </span>
             </div>
             <div className="p-1">
@@ -85,7 +88,7 @@ export function AuthButton() {
                   className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-ink-500 hover:bg-ink-50"
                 >
                   <LayoutDashboard className="h-4 w-4" />
-                  Admin Panel
+                  {tr('adminPanel', language)}
                 </Link>
               )}
               <Link
@@ -94,8 +97,7 @@ export function AuthButton() {
                 className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-ink-500 hover:bg-ink-50"
               >
                 <UserIcon className="h-4 w-4" />
-                
-                My Account
+                {tr('myAccount', language)}
               </Link>
               <Link
                 href="/account/orders"
@@ -103,7 +105,7 @@ export function AuthButton() {
                 className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-ink-500 hover:bg-ink-50"
               >
                 <ShoppingBag className="h-4 w-4" />
-                My Orders
+                {tr('myOrders', language)}
               </Link>
               <Link
                 href="/account/wishlist"
@@ -111,7 +113,7 @@ export function AuthButton() {
                 className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-ink-500 hover:bg-ink-50"
               >
                 <Heart className="h-4 w-4" />
-                My Wishlist
+                {tr('myWishlist', language)}
               </Link>
               <button
                 onClick={() => {
@@ -121,7 +123,7 @@ export function AuthButton() {
                 className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-red-600 hover:bg-red-50"
               >
                 <LogOut className="h-4 w-4" />
-                Logout
+                {tr('logout', language)}
               </button>
             </div>
           </motion.div>

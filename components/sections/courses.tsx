@@ -10,6 +10,7 @@ import { courses as seedCourses, Course } from '@/lib/data';
 import type { Localized } from '@/lib/i18n/pick';
 import { supabase } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/i18n/context';
+import { tr, ui } from '@/lib/i18n/strings';
 
 /** Bengali-level lookup table — same for both languages (used as a CSS key). */
 const LEVEL_COLORS_BN: Record<string, string> = {
@@ -66,7 +67,7 @@ const withCacheBust = (image: string, version?: string): string => {
 };
 
 export function Courses() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [courses, setCourses] = useState<Course[]>(seedCourses);
   const [versions, setVersions] = useState<Record<string, string>>({});
@@ -123,13 +124,19 @@ export function Courses() {
     <section id="courses" className="relative section-pad">
       <div className="container">
         <SectionHeading
-          eyebrow="আমাদের কোর্সসমূহ"
+          eyebrow={tr('coursesEyebrow', language)}
           title={
-            <>
-              ১৫টি কোর্স।<br/> <span className="brush-underline">একটি</span> সৃজনশীল যাত্রা।
-            </>
+            language === 'bn' ? (
+              <>
+                ১৫টি কোর্স।<br/> <span className="brush-underline">একটি</span> সৃজনশীল যাত্রা।
+              </>
+            ) : (
+              <>
+                15 courses,<br/> <span className="brush-underline">one</span> creative journey.
+              </>
+            )
           }
-          description="বেসিক ড্রয়িং থেকে শুরু করে প্রোফেশনাল ফাইন আর্টস পর্যন্ত — প্রতিটি বয়স, স্তর ও স্বপ্নের জন্য উপযুক্ত ক্লাস।"
+          description={tr('coursesDescription', language)}
         />
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -200,7 +207,7 @@ export function Courses() {
                   className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-palette-orange transition hover:gap-2.5"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  বিস্তারিত জানুন
+                  {tr('learnMoreCta', language)}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
@@ -213,7 +220,7 @@ export function Courses() {
             href="#contact"
             className="inline-flex items-center gap-2 rounded-full border-2 border-palette-orange bg-white px-8 py-3 font-semibold text-palette-orange transition hover:bg-palette-orange hover:text-white"
           >
-            সকল কোর্স দেখুন
+            {tr('seeAllCourses', language)}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -304,7 +311,7 @@ export function Courses() {
                     }}
                     className="mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-palette-orange px-8 py-3 font-semibold text-white transition hover:bg-palette-orange/90"
                   >
-                    এখনই ভর্তি হোন
+                    {tr('enrollNowCta', language)}
                     <ArrowRight className="h-5 w-5" />
                   </button>
                 </div>

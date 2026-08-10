@@ -10,6 +10,8 @@ import { formatPrice } from '@/lib/utils';
 import { supabase } from '@/lib/supabase/client';
 import { showToast } from '@/components/ui/toaster';
 import { OrderOutcomeOverlay } from '@/components/order-outcome-overlay';
+import { useLanguage } from '@/lib/i18n/context';
+import { tr } from '@/lib/i18n/strings';
 
 type CustomerOrder = {
   id: string;
@@ -43,15 +45,16 @@ const statusColors: Record<string, string> = {
 
 export default function OrdersPage() {
   const { user, loading, openLogin } = useAuth();
+  const { language } = useLanguage();
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [outcome, setOutcome] = useState<'cancelled' | null>(null);
 
   const cancelOrder = async (order: CustomerOrder) => {
-    const updatedOrder = { ...order, status: 'Cancelled', adminMessage: 'This order was cancelled by the customer.' };
+    const updatedOrder = { ...order, status: 'Cancelled', adminMessage: language === 'bn' ? 'এই অর্ডারটি গ্রাহক কর্তৃক বাতিল করা হয়েছে।' : 'This order was cancelled by the customer.' };
     const { error } = await supabase.from('store_orders').update({ order_data: updatedOrder }).eq('id', order.id);
     if (error) {
       console.error(error);
-      showToast({ title: 'Unable to cancel order', description: error.message, variant: 'destructive' });
+      showToast({ title: tr('auth.orderCancelFailed', language), description: error.message, variant: 'destructive' });
       return;
     }
     {
@@ -66,7 +69,7 @@ export default function OrdersPage() {
       const { data, error } = await supabase.from('store_orders').select('order_data').order('created_at', { ascending: false });
       if (error) {
         console.error(error);
-        showToast({ title: 'Unable to load orders', description: error.message, variant: 'destructive' });
+        showToast({ title: tr('auth.ordersLoadFailed', language), description: error.message, variant: 'destructive' });
         return;
       }
       setOrders((data ?? []).map((row) => row.order_data as CustomerOrder).filter((order) => order.customer.email === user.email));
@@ -74,7 +77,7 @@ export default function OrdersPage() {
     void loadOrders();
     window.addEventListener('focus', loadOrders);
     return () => window.removeEventListener('focus', loadOrders);
-  }, [user]);
+  }, [user, language]);
 
   if (loading) {
     return (
@@ -90,10 +93,10 @@ export default function OrdersPage() {
         <div className="max-w-md text-center">
           <Package className="mx-auto h-12 w-12 text-palette-orange" />
           <h1 className="mt-4 font-display text-3xl font-bold text-ink-500">
-            Login to view orders
+            {tr('loginToViewOrders', language)}
           </h1>
           <Button onClick={() => openLogin('login', 'customer')} className="mt-6">
-            Login
+            {tr('login', language)}
           </Button>
         </div>
       </div>
@@ -105,11 +108,11 @@ export default function OrdersPage() {
       <OrderOutcomeOverlay outcome={outcome} onClose={() => setOutcome(null)} />
       <div className="mb-8 flex items-end justify-between">
         <div>
-          <h1 className="font-display text-4xl font-bold text-ink-500">আমার অর্ডার</h1>
-          <p className="mt-2 text-ink-400">আপনার সাম্প্রতিক কেনাকাটার তালিকা</p>
+          <h1 className="font-display text-4xl font-bold text-ink-500">{tr('ordersTitle', language)}</h1>
+          <p className="mt-2 text-ink-400">{tr('ordersSubtitle', language)}</p>
         </div>
         <Link href="/account" className="text-sm font-semibold text-palette-orange hover:underline">
-          ← প্রোফাইলে ফিরে যান
+          {tr('backToProfile', language)}
         </Link>
       </div>
 
@@ -117,14 +120,14 @@ export default function OrdersPage() {
         <div className="rounded-3xl border border-white/60 bg-white/90 p-10 text-center shadow-lg backdrop-blur-sm">
           <Package className="mx-auto h-14 w-14 text-palette-orange" />
           <h2 className="mt-4 font-display text-2xl font-bold text-ink-500">
-            No orders yet
+            {tr('noOrdersYet', language)}
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm text-ink-400">
-            You have not ordered any products yet. Browse the art store and choose your favorite items.
+            {tr('noOrdersHint', language)}
           </p>
           <Link href="/store">
             <Button className="mt-6">
-              See All Products
+              {tr('seeAllProducts', language)}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
@@ -171,9 +174,9 @@ export default function OrdersPage() {
                     {formatPrice(order.total)}
                   </div>
                   <button className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-ink-400 hover:text-ink-500">
-                    Details <ArrowRight className="h-3 w-3" />
+                    {tr('details', language)} <ArrowRight className="h-3 w-3" />
                   </button>
-                  {order.status !== 'Cancelled' && order.status !== 'Delivered' && <button onClick={() => void cancelOrder(order)} className="mt-3 block text-sm font-bold text-rose-600 hover:underline">Cancel order</button>}
+                  {order.status !== 'Cancelled' && order.status !== 'Delivered' && <button onClick={() => void cancelOrder(order)} className="mt-3 block text-sm font-bold text-rose-600 hover:underline">{tr('cancelOrder', language)}</button>}
                 </div>
               </motion.div>
             );

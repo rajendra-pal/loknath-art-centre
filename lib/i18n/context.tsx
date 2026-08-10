@@ -17,15 +17,22 @@ import { supabase } from '@/lib/supabase/client';
 const STORAGE_KEY = 'lac.lang';
 const VALID: Language[] = ['en', 'bn'];
 
-function readInitialLanguage(): Language {
-  if (typeof window === 'undefined') return 'en';
+// Always start with 'en' so SSR and the first client render agree. Reading
+// localStorage during useState's initializer would diverge from the server
+// (which has no window) and trip React's hydration check. The stored value
+// is applied in a post-mount effect below — see `LanguageBootstrap` for the
+// <html lang>/body-font side that's already wired.
+const INITIAL_LANGUAGE: Language = 'en';
+
+function readStoredLanguage(): Language | null {
+  if (typeof window === 'undefined') return null;
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored === 'en' || stored === 'bn') return stored;
   } catch {
     // localStorage may be blocked (private mode, file://) — fall through.
   }
-  return 'en';
+  return null;
 }
 
 type LanguageContextValue = {
@@ -40,8 +47,20 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  // useState initializer runs once on mount (client), so no FOUC.
-  const [language, setLanguageState] = useState<Language>(readInitialLanguage);
+  const [language, setLanguageState] = useState<Language>(INITIAL_LANGUAGE);
+
+  // Apply the user's stored preference after hydration so the first paint
+  // matches the SSR HTML. LanguageBootstrap handles <html lang>/body font;
+  // this effect keeps the React-side context value in sync.
+  useEffect(() => {
+    const stored = readStoredLanguage();
+    if (stored && stored !== language) {
+      setLanguageState(stored);
+    }
+    // We intentionally only run on mount — `language` is read once to decide
+    // whether a stored value differs, not to react to it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Keep <html lang> in sync so screen readers and CSS work right.
   useEffect(() => {

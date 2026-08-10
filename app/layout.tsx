@@ -55,11 +55,11 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    // Default lang is bn (matches the current canonical site). The client
-    // LanguageBootstrap flips this to "en" on mount if the user's stored
-    // preference is English. suppressHydrationWarning avoids the inevitable
-    // mismatch with the html attribute.
-    <html lang="bn" suppressHydrationWarning>
+    // Default lang is "en" — by default the whole site stays in English. The
+    // client LanguageBootstrap flips this to "bn" on mount if the user's
+    // stored preference is Bengali. suppressHydrationWarning avoids the
+    // inevitable mismatch with the html attribute.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -69,7 +69,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${poppins.variable} ${hindSiliguri.variable} font-bengali`}
+        className={`${poppins.variable} ${hindSiliguri.variable} font-sans`}
         suppressHydrationWarning
       >
         <LanguageBootstrap />
