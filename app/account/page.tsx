@@ -67,9 +67,9 @@ export default function AccountPage() {
   const startEditing = () => { setPhone(user.phone || ''); setAddress(user.address || ''); setEditing(true); };
   const saveProfile = async () => {
     const result = await updateProfile({ phone, address });
-    if (!result.ok) { showToast({ title: tr('auth.profileUpdateFailed', language), description: result.error }); return; }
+    if (!result.ok) { showToast({ title: tr('profileUpdateFailed', language), description: result.error }); return; }
     setEditing(false);
-    showToast({ title: tr('auth.profileUpdated', language), variant: 'success' });
+    showToast({ title: tr('profileUpdated', language), variant: 'success' });
   };
 
   return (

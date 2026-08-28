@@ -54,7 +54,7 @@ export default function OrdersPage() {
     const { error } = await supabase.from('store_orders').update({ order_data: updatedOrder }).eq('id', order.id);
     if (error) {
       console.error(error);
-      showToast({ title: tr('auth.orderCancelFailed', language), description: error.message, variant: 'destructive' });
+      showToast({ title: tr('orderCancelFailed', language), description: error.message, variant: 'destructive' });
       return;
     }
     {
@@ -69,7 +69,7 @@ export default function OrdersPage() {
       const { data, error } = await supabase.from('store_orders').select('order_data').order('created_at', { ascending: false });
       if (error) {
         console.error(error);
-        showToast({ title: tr('auth.ordersLoadFailed', language), description: error.message, variant: 'destructive' });
+        showToast({ title: tr('ordersLoadFailed', language), description: error.message, variant: 'destructive' });
         return;
       }
       setOrders((data ?? []).map((row) => row.order_data as CustomerOrder).filter((order) => order.customer.email === user.email));

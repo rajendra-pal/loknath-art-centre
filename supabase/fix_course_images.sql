@@ -1,10 +1,3 @@
--- Fixup: image paths in public.courses have drifted from the on-disk filenames.
--- This script reconciles each course's `image` column with the actual files
--- under public/images/drawing/. Idempotent — safe to re-run.
---
--- The seed migration (supabase/courses.sql) writes a different set of rows,
--- so this script only updates `image` and leaves the rest of the row alone.
--- Display order is preserved unless the row currently sits outside 1..15.
 
 begin;
 

@@ -1,10 +1,3 @@
--- FIX: public.is_admin() is missing from the database, which is why
--- every admin UPDATE/INSERT on public.courses silently matches 0 rows.
--- Run this entire file in the Supabase SQL editor. Idempotent.
-
--- (1) Recreate the function. SECURITY DEFINER + set search_path = public
---     so the inner SELECT on accounts isn't tripped up by RLS or by a
---     different search_path on the caller.
 create or replace function public.is_admin() returns boolean
   language sql
   security definer

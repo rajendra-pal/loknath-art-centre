@@ -215,6 +215,73 @@ export default function StorePage() {
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [wishlist, setWishlist] = React.useState<WishlistItem[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
+  const [cartLoading, setCartLoading] = React.useState(false);
+
+  // Persisted cart — cart_items is the source of truth. The local `cart` state
+  // mirrors it so the UI can re-render without a round-trip, but a hard refresh
+  // (or any other device) will see the same items from Supabase.
+  const CART_UPDATED_EVENT = 'loknath-cart-updated';
+
+  const dispatchCartUpdated = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+    }
+  };
+
+  const loadCart = React.useCallback(async (accountId: string) => {
+    setCartLoading(true);
+    const { data, error } = await supabase
+      .from('cart_items')
+      .select('quantity, product_id, products(id, name, price, image)')
+      .eq('account_id', accountId);
+    if (error) {
+      console.error('Cart load failed:', error);
+      showToast({ title: 'Unable to load cart', description: error.message, variant: 'destructive' });
+      setCartLoading(false);
+      return;
+    }
+    setCart(
+      (data ?? []).flatMap((row: any) => {
+        const product = row.products;
+        if (!product) return [];
+        return [
+          {
+            id: row.product_id,
+            name: product.name,
+            price: Number(product.price),
+            image: product.image || '/logo.png',
+            quantity: row.quantity ?? 1,
+          },
+        ];
+      })
+    );
+    setCartLoading(false);
+  }, []);
+
+  React.useEffect(() => {
+    if (!user) {
+      setCart([]);
+      return;
+    }
+    void loadCart(user.id);
+    const onFocus = () => { void loadCart(user.id); };
+    const onCartUpdated = () => { void loadCart(user.id); };
+    const channel = supabase
+      .channel('cart-public')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cart_items', filter: `account_id=eq.${user.id}` },
+        () => { void loadCart(user.id); }
+      )
+      .subscribe();
+    window.addEventListener('focus', onFocus);
+    window.addEventListener(CART_UPDATED_EVENT, onCartUpdated);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener(CART_UPDATED_EVENT, onCartUpdated);
+      void supabase.removeChannel(channel);
+    };
+  }, [user, loadCart]);
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
   const [showProductSidebar, setShowProductSidebar] = React.useState(false);
@@ -266,20 +333,21 @@ export default function StorePage() {
     openLogin('login', 'customer');
   };
 
-  const addToCart = (product: Product) => {
+  const addToCart = async (product: Product) => {
     if (!user) {
       promptLogin();
       return;
     }
 
+    // Optimistic update first so the cart sidebar opens immediately.
     setCart((prev) => {
       const existing = prev.find((item) => item.id === product.id);
       if (existing) {
-        // Item already in cart, open cart sidebar
         setShowCart(true);
         return prev;
       }
-      const newCart = [
+      setShowCart(true);
+      return [
         ...prev,
         {
           id: product.id,
@@ -289,10 +357,41 @@ export default function StorePage() {
           quantity: 1,
         },
       ];
-      // Auto-open cart sidebar when adding new item
-      setShowCart(true);
-      return newCart;
     });
+
+    // Upsert with onConflict on the (account_id, product_id) unique constraint
+    // defined in schema.sql — increment quantity when the row already exists.
+    const { data: existing } = await supabase
+      .from('cart_items')
+      .select('quantity')
+      .eq('account_id', user.id)
+      .eq('product_id', product.id)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabase
+        .from('cart_items')
+        .update({ quantity: existing.quantity + 1 })
+        .eq('account_id', user.id)
+        .eq('product_id', product.id);
+      if (error) {
+        console.error('Cart increment failed:', error);
+        showToast({ title: 'Unable to update cart', description: error.message, variant: 'destructive' });
+        return;
+      }
+    } else {
+      const { error } = await supabase
+        .from('cart_items')
+        .insert({ account_id: user.id, product_id: product.id, quantity: 1 });
+      if (error) {
+        console.error('Cart insert failed:', error);
+        showToast({ title: 'Unable to add to cart', description: error.message, variant: 'destructive' });
+        return;
+      }
+    }
+
+    await loadCart(user.id);
+    dispatchCartUpdated();
     showToast({
       title: 'কার্টে যোগ হয়েছে',
       description: product.name,
@@ -300,8 +399,26 @@ export default function StorePage() {
     });
   };
 
-  const removeFromCart = (productId: string) => {
+  const removeFromCart = async (productId: string) => {
+    if (!user) {
+      setCart((prev) => prev.filter((item) => item.id !== productId));
+      return;
+    }
+    // Optimistic update so the row disappears instantly.
+    const previous = cart;
     setCart((prev) => prev.filter((item) => item.id !== productId));
+    const { error } = await supabase
+      .from('cart_items')
+      .delete()
+      .eq('account_id', user.id)
+      .eq('product_id', productId);
+    if (error) {
+      console.error('Cart remove failed:', error);
+      setCart(previous);
+      showToast({ title: 'Unable to update cart', description: error.message, variant: 'destructive' });
+      return;
+    }
+    dispatchCartUpdated();
   };
 
   const toggleCart = (product: Product) => {
@@ -316,25 +433,17 @@ export default function StorePage() {
     addToCart(product);
   };
 
-  const buyNow = (product: Product) => {
+  const buyNow = async (product: Product) => {
     if (!user) {
       promptLogin();
       return;
     }
 
-    // First add to cart if not already there
+    // First add to cart if not already there — reuse the same DB-backed path
+    // as the regular "Add to cart" button so the row exists before checkout.
     const isInCart = cart.some((item) => item.id === product.id);
     if (!isInCart) {
-      setCart((prev) => [
-        ...prev,
-        {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          image: product.image,
-          quantity: 1,
-        },
-      ]);
+      await addToCart(product);
     }
 
     // Open product details sidebar instead of directly going to checkout
@@ -413,7 +522,18 @@ export default function StorePage() {
       throw error;
     }
 
-    setCart([]);
+    // Clear the persisted cart so a refresh or another device sees an empty
+    // cart. cart_items is the source of truth — the local state mirror follows
+    // from the load below.
+    const { error: clearError } = await supabase
+      .from('cart_items')
+      .delete()
+      .eq('account_id', user.id);
+    if (clearError) {
+      console.error('Cart clear failed:', clearError);
+    }
+    await loadCart(user.id);
+    dispatchCartUpdated();
     setShowCheckout(false);
     setCheckoutDetails({
       phone: '',
@@ -441,16 +561,42 @@ export default function StorePage() {
     if (!nextDetails.phone || !nextDetails.address || !nextDetails.city || !nextDetails.pincode) showToast({ title: 'Complete your delivery profile', description: 'Some account delivery details are missing. Please enter them before ordering.' });
   };
 
-  const updateQuantity = (productId: string, delta: number) => {
+  const updateQuantity = async (productId: string, delta: number) => {
+    if (!user) {
+      setCart((prev) =>
+        prev
+          .map((item) =>
+            item.id === productId
+              ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+              : item
+          )
+          .filter((item) => item.quantity > 0)
+      );
+      return;
+    }
+    const current = cart.find((item) => item.id === productId);
+    if (!current) return;
+    const nextQuantity = Math.max(1, current.quantity + delta);
+    if (nextQuantity === current.quantity) return;
+    // Optimistic update first.
     setCart((prev) =>
-      prev
-        .map((item) =>
-          item.id === productId
-            ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
+      prev.map((item) => (item.id === productId ? { ...item, quantity: nextQuantity } : item))
     );
+    const { error } = await supabase
+      .from('cart_items')
+      .update({ quantity: nextQuantity })
+      .eq('account_id', user.id)
+      .eq('product_id', productId);
+    if (error) {
+      console.error('Cart quantity update failed:', error);
+      // Roll back the optimistic update.
+      setCart((prev) =>
+        prev.map((item) => (item.id === productId ? { ...item, quantity: current.quantity } : item))
+      );
+      showToast({ title: 'Unable to update cart', description: error.message, variant: 'destructive' });
+      return;
+    }
+    dispatchCartUpdated();
   };
 
   const addToWishlist = async (product: Product) => {

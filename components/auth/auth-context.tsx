@@ -118,7 +118,7 @@ export function AuthProvider({
 
     if (accountError) {
       console.error('Account lookup failed:', accountError.message ?? accountError);
-      showToast({ title: tr('auth.accountLoadFailed', currentLang()), description: accountError.message ?? 'Account record not found.', variant: 'destructive' });
+      showToast({ title: tr('accountLoadFailed', currentLang()), description: accountError.message ?? 'Account record not found.', variant: 'destructive' });
       setUser(null);
       setLoading(false);
       return;
@@ -145,7 +145,7 @@ export function AuthProvider({
 
         if (byEmailError) {
           console.error('Account lookup by email failed:', byEmailError.message ?? byEmailError);
-          showToast({ title: tr('auth.accountLoadFailed', currentLang()), description: byEmailError.message ?? 'Account record not found.', variant: 'destructive' });
+          showToast({ title: tr('accountLoadFailed', currentLang()), description: byEmailError.message ?? 'Account record not found.', variant: 'destructive' });
           setUser(null);
           setLoading(false);
           return;
@@ -162,7 +162,7 @@ export function AuthProvider({
 
           if (claimError || !claimed) {
             console.error('Account re-attach failed:', claimError?.message ?? claimError);
-            showToast({ title: tr('auth.accountLoadFailed', currentLang()), description: claimError?.message ?? 'Account record not found.', variant: 'destructive' });
+            showToast({ title: tr('accountLoadFailed', currentLang()), description: claimError?.message ?? 'Account record not found.', variant: 'destructive' });
             setUser(null);
             setLoading(false);
             return;
@@ -204,7 +204,7 @@ export function AuthProvider({
 
       if (insertError || !inserted) {
         console.error('Account provisioning failed:', insertError?.message ?? insertError);
-        showToast({ title: tr('auth.accountLoadFailed', currentLang()), description: insertError?.message ?? 'Account record not found.', variant: 'destructive' });
+        showToast({ title: tr('accountLoadFailed', currentLang()), description: insertError?.message ?? 'Account record not found.', variant: 'destructive' });
         setUser(null);
         setLoading(false);
         return;
@@ -257,7 +257,7 @@ export function AuthProvider({
       };
 
     showToast({
-      title: tr('auth.loginSuccess', currentLang()),
+      title: tr('loginSuccess', currentLang()),
       variant: 'success',
     });
 
@@ -326,12 +326,12 @@ export function AuthProvider({
 
     if (accountError) {
       console.error('Account setup failed:', accountError.message);
-      showToast({ title: tr('auth.accountSetupFailed', currentLang()), description: accountError.message, variant: 'destructive' });
+      showToast({ title: tr('accountSetupFailed', currentLang()), description: accountError.message, variant: 'destructive' });
       return { ok: false, error: accountError.message };
     }
 
     showToast({
-      title: tr('auth.accountCreated', currentLang()),
+      title: tr('accountCreated', currentLang()),
       variant: 'success',
     });
 
@@ -352,7 +352,7 @@ export function AuthProvider({
     setUser(null);
 
     showToast({
-      title: tr('auth.loggedOut', currentLang()),
+      title: tr('loggedOut', currentLang()),
     });
   }
 
@@ -360,7 +360,7 @@ export function AuthProvider({
     if (!user) return { ok: false, error: 'Not logged in' };
     const updatedUser = { ...user, phone: data.phone, address: data.address };
     const { error: accountError } = await supabase.from('accounts').update({ phone: data.phone, address: data.address }).eq('id', user.id).select();
-    if (accountError) { console.error(accountError); showToast({ title: tr('auth.profileUpdateFailed', currentLang()), description: accountError.message, variant: 'destructive' }); return { ok: false, error: accountError.message }; }
+    if (accountError) { console.error(accountError); showToast({ title: tr('profileUpdateFailed', currentLang()), description: accountError.message, variant: 'destructive' }); return { ok: false, error: accountError.message }; }
     setUser(updatedUser);
     return { ok: true };
   }

@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import { Menu, X, Phone, Sparkles } from 'lucide-react';
 import { navLinks } from '@/lib/data';
+import type { Localized } from '@/lib/data';
 import { Button } from '@/components/ui/button';
 // import { useTheme } from '@/components/theme-provider';
 import { useAuth } from '@/components/auth/auth-context';
@@ -15,23 +16,41 @@ import { useLanguage } from '@/lib/i18n/context';
 import { tr } from '@/lib/i18n/strings';
 import { cn } from '@/lib/utils';
 
+// Links shown to signed-in admins. Keep this list intentionally narrow — admins
+// only need quick access to the public-facing pages (Home, Courses, Art Store).
+// They reach /admin via the dashboard (or by typing the URL), not the navbar.
+const adminNavLinks: { label: Localized<string>; href: string }[] = [
+  { label: { en: 'Home', bn: 'হোম' }, href: '#home' },
+  { label: { en: 'Courses', bn: 'কোর্স' }, href: '#courses' },
+  { label: { en: 'Art Store', bn: 'আর্ট স্টোর' }, href: '/store' },
+];
+
 export function Navbar() {
   const [open, setOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
   const [activeHref, setActiveHref] = React.useState('#home');
   // const { resolvedTheme, setTheme } = useTheme();
-  const { openLogin } = useAuth();
+  const { openLogin, user } = useAuth();
   const { t, language } = useLanguage();
   const pathname = usePathname();
   const { scrollY } = useScroll();
   const isStorePage = pathname.startsWith('/store');
+  const isHomePage = pathname === '/';
+  const isAdmin = user?.role === 'admin';
   const displayedNavLinks = isStorePage
     ? [
         { label: { en: 'Home', bn: 'হোম' }, href: '/#home' },
         { label: { en: 'Art Store', bn: 'আর্ট স্টোর' }, href: '/store' },
         { label: { en: 'Contact', bn: 'যোগাযোগ' }, href: '/#contact' },
       ]
+    : isAdmin
+    ? adminNavLinks
     : navLinks;
+  // On any non-home page (e.g. /account, /admin, /payment), bare hash links
+  // like `#home` resolve to the current URL and do nothing. Prefix them with
+  // `/` so Next.js navigates home and scrolls to the section.
+  const resolveHref = (href: string) =>
+    !isHomePage && href.startsWith('#') ? `/${href}` : href;
   const isLinkActive = (href: string) =>
     activeHref === href || (href === '/store' && isStorePage);
 
@@ -124,11 +143,12 @@ export function Navbar() {
         <ul className={cn('hidden xl:flex items-center', isStorePage ? 'gap-8' : 'gap-1')}>
           {displayedNavLinks.map((link) => {
             const isActive = isLinkActive(link.href);
+            const href = resolveHref(link.href);
 
             return (
               <li key={link.href} className="group">
                 <Link
-                  href={link.href}
+                  href={href}
                   className={cn(
                     'relative px-3 py-2 text-base font-medium text-ink-500 transition hover:text-palette-orange',
                     isStorePage && 'text-lg',
@@ -166,10 +186,12 @@ export function Navbar() {
             <span className="hidden lg:inline">+91 62963 77408</span>
           </a>
           <AuthButton />
-          <Button size="sm" onClick={() => openLogin('register', 'customer')}>
-            <Sparkles className="h-4 w-4" />
-            {tr('enrollNowCta', language)}
-          </Button>
+          {!isAdmin && (
+            <Button size="sm" onClick={() => openLogin('register', 'customer')}>
+              <Sparkles className="h-4 w-4" />
+              {tr('enrollNowCta', language)}
+            </Button>
+          )}
         </div>
 
         {/* Mobile menu button */}
@@ -212,7 +234,7 @@ export function Navbar() {
                     transition={{ delay: i * 0.05 }}
                   >
                     <Link
-                      href={link.href}
+                      href={resolveHref(link.href)}
                       onClick={() => setOpen(false)}
                       className={cn(
                         'flex items-center justify-between rounded-2xl px-4 py-3 text-base font-medium text-ink-500 transition hover:bg-white hover:text-palette-orange',
@@ -234,10 +256,12 @@ export function Navbar() {
                   <Phone className="h-4 w-4 text-palette-orange" />
                   +91 62963 77408
                 </a>
-                <Button onClick={() => { openLogin('register', 'customer'); setOpen(false); }}>
-                  <Sparkles className="h-4 w-4" />
-                  {tr('enrollNowCta', language)}
-                </Button>
+                {!isAdmin && (
+                  <Button onClick={() => { openLogin('register', 'customer'); setOpen(false); }}>
+                    <Sparkles className="h-4 w-4" />
+                    {tr('enrollNowCta', language)}
+                  </Button>
+                )}
               </div>
             </div>
           </motion.div>

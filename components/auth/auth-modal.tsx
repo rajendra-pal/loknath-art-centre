@@ -50,7 +50,7 @@ export function AuthModal() {
       if (mode === 'login') {
         const res = await login(email, password);
         if (!res.ok) {
-          setError(res.error ?? tr('auth.loginFailed', language));
+          setError(res.error ?? tr('loginFailed', language));
           return;
         }
         closeLogin();
@@ -58,12 +58,12 @@ export function AuthModal() {
         const name = data.get('name') as string;
         const phone = data.get('phone') as string;
         if (!name || !email || !password) {
-          setError(tr('auth.fillAllFields', language));
+          setError(tr('fillAllFields', language));
           return;
         }
         const res = await register({ name, email, phone, password });
         if (!res.ok) {
-          setError(res.error ?? tr('auth.registrationFailed', language));
+          setError(res.error ?? tr('registrationFailed', language));
           return;
         }
         closeLogin();

@@ -102,12 +102,20 @@ function QRPaymentSection({ orderId, amount, upiId = 'loknathartcenter@upi' }: Q
   React.useEffect(() => {
     async function loadMerchantSettings() {
       try {
-        const { data } = await supabase
-          .from('profiles')
+        // Read the merchant name from the global business_settings singleton.
+        // Previously this read `from('profiles').limit(1)` which returned
+        // whichever profile row happened to be first — usually a customer's,
+        // not the admin's, so the merchant name was effectively random.
+        const { data, error } = await supabase
+          .from('business_settings')
           .select('business_name')
-          .limit(1)
-          .single();
+          .eq('id', 1)
+          .maybeSingle();
 
+        if (error) {
+          console.warn('Merchant settings load failed, using default:', error);
+          return;
+        }
         if (data?.business_name) {
           setMerchantName(data.business_name);
         }
@@ -322,16 +330,22 @@ function PaymentContent() {
   const [timerKey, setTimerKey] = React.useState(0);
   const [upiId, setUpiId] = React.useState('loknathartcenter@upi');
 
-  // Fetch UPI ID from database
+  // Fetch UPI ID from the global business_settings singleton. The same row
+  // every admin edits and every customer pays into — see
+  // supabase/business_settings.sql for the table layout and RLS.
   React.useEffect(() => {
     async function fetchUpiId() {
       try {
-        const { data } = await supabase
-          .from('profiles')
+        const { data, error } = await supabase
+          .from('business_settings')
           .select('upi_id')
-          .limit(1)
-          .single();
+          .eq('id', 1)
+          .maybeSingle();
 
+        if (error) {
+          console.warn('UPI fetch failed, using default:', error);
+          return;
+        }
         if (data?.upi_id) {
           setUpiId(data.upi_id);
         }

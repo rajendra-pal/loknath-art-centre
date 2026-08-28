@@ -707,5 +707,12 @@ export const ui: Record<string, Localized<string>> = {
 };
 
 export function tr(key: keyof typeof ui, language: 'en' | 'bn'): string {
-  return ui[key][language];
+  const entry = ui[key];
+  if (!entry) {
+    // Unknown key — surface the key itself rather than crashing the page.
+    // This keeps auth flows and other call sites alive even if a translation
+    // string is added without being registered here.
+    return String(key);
+  }
+  return entry[language];
 }

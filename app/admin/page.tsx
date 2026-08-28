@@ -621,10 +621,124 @@ function BlogPanel({ blogs, setBlogs }: { blogs: Blog[]; setBlogs: (items: Blog[
 function ProductPanel() {
   const { language } = useLanguage();
   const [products, setProducts] = useState<Product[]>([]); const [editing, setEditing] = useState<Product | null>(null);
+  // Track the picked image in a separate draft state so picking a file while
+  // adding a NEW product (editing === null) doesn't fall into the UPDATE
+  // branch with a phantom id. Without this, the ImageField's onChange merges
+  // a dummy `{ id: '' }` row into `editing`, then save() generates a fresh id
+  // via `id()` and Supabase rejects the UPDATE as "row not found".
+  const [imageDraft, setImageDraft] = useState<string>(emptyImage);
   const load = async () => { const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false }); if (error) { console.error(error); alert(error.message); return; } setProducts((data ?? []).map((p) => ({ id: p.id, name: p.name, category: p.category, price: Number(p.price), stock: p.stock ?? 0, image: p.image || emptyImage }))); };
   useEffect(() => { void load(); }, []);
-  const save = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const form = Object.fromEntries(new FormData(event.currentTarget)); const item = { id: editing?.id || id(), name: String(form.name), category: String(form.category), price: Number(form.price), stock: Number(form.stock), image: editing?.image || emptyImage }; const query = editing ? supabase.from('products').update(item).eq('id', item.id).select() : supabase.from('products').insert(item).select(); const { error } = await query; if (error) { console.error(error); alert(error.message); throw error; } setEditing(null); event.currentTarget.reset(); await load(); };
-  return <Panel title={tr('productManagement', language)}><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="name" defaultValue={editing?.name} placeholder={tr('productNamePlaceholder', language)} required /><Input name="category" defaultValue={editing?.category} placeholder={tr('productCategoryPlaceholder', language)} required /><Input name="price" type="number" defaultValue={editing?.price} placeholder={tr('pricePlaceholder', language)} required /><Input name="stock" type="number" defaultValue={editing?.stock} placeholder={tr('stockPlaceholder', language)} required /><ImageField value={editing?.image} onChange={image => setEditing(current => ({ ...(current || { id: '', name: '', category: '', price: 0, stock: 0 }), image }))} /><Button type="submit">{editing ? tr('updateProduct', language) : tr('addProduct', language)}</Button></form><ItemGrid items={products} empty={tr('noProducts', language)} render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.name}</b><p className="text-sm text-ink-400">{item.category} · {money(item.price)} · {tr('stockPlaceholder', language)} {item.stock}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // Capture form + fields synchronously — React nulls event.currentTarget
+    // once the handler yields, so anything we read after `await query` is gone.
+    const formEl = event.currentTarget;
+    const form = Object.fromEntries(new FormData(formEl));
+    const item = {
+      id: editing?.id || id(),
+      name: String(form.name),
+      category: String(form.category),
+      price: Number(form.price),
+      stock: Number(form.stock),
+      // Prefer the freshly-picked image, then the row being edited, then the
+      // seed fallback. `editing?.image` would be empty when adding a new
+      // product — see imageDraft comment above.
+      image: imageDraft || editing?.image || emptyImage,
+    };
+    try {
+      // is_admin() probe — if it returns false, RLS silently returns 0 affected
+      // rows and the new product won't appear on /store. Logging the value
+      // makes the cause obvious instead of mysterious.
+      let adminOk = false;
+      try {
+        const probe = await supabase.rpc('is_admin');
+        console.log('[ProductPanel.save] is_admin() =>', probe);
+        adminOk = Boolean((probe as { data?: unknown } | null)?.data);
+      } catch (probeErr) {
+        // The most common cause here is the function itself missing — the
+        // RPC call will throw with PGRST202 / 404. Surface that to the user
+        // instead of pretending it's an RLS issue.
+        const { message } = readError(probeErr);
+        console.warn('[ProductPanel.save] is_admin probe failed:', probeErr);
+        showToast({
+          title: 'is_admin() প্রকল্পে নেই',
+          description: message || 'public.is_admin() RPC কল করা যাচ্ছে না। সার্�ারে fix_is_admin.sql চালান।',
+          variant: 'destructive',
+        });
+        return;
+      }
+      if (!adminOk) {
+        showToast({
+          title: 'Admin অনুমতি নেই',
+          description: 'public.accounts.role = "admin" নয়। SQL এডিটরে ভূমিকা আপডেট করে আবার লগইন করুন।',
+          variant: 'destructive',
+        });
+        return;
+      }
+      const query = editing
+        ? supabase.from('products').update(item).eq('id', item.id).select()
+        : supabase.from('products').insert(item).select();
+      const { data, error } = await query;
+      if (error) {
+        const { message } = readError(error);
+        console.error('[ProductPanel.save] supabase error:', error);
+        showToast({ title: 'সংরক্ষণ ব্যর্থ', description: message || 'অনুগ্রহ করে আবার চেষ্টা করুন', variant: 'destructive' });
+        return;
+      }
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        // 0 affected rows has exactly two causes for an UPDATE: (1) the row
+        // id doesn't exist (stale `editing` from a previous load), or (2)
+        // RLS filtered the UPDATE. Distinguish them with a SELECT that
+        // bypasses the same gate — `Products public read` is `using (true)`,
+        // so a missing row means id is stale; an existing row means policy.
+        if (editing) {
+          const { data: exists, error: existsError } = await supabase
+            .from('products')
+            .select('id')
+            .eq('id', item.id)
+            .maybeSingle();
+          if (existsError) {
+            const { message } = readError(existsError);
+            console.error('[ProductPanel.save] existence check failed:', existsError);
+            showToast({ title: 'সংরক্ষণ ব্যর্থ', description: message || 'অনুগ্রহ করে আবার চেষ্টা করুন', variant: 'destructive' });
+            return;
+          }
+          if (!exists) {
+            console.warn('[ProductPanel.save] editing.id not found, clearing state:', item.id);
+            setEditing(null);
+            formEl.reset();
+            await load();
+            showToast({
+              title: 'পণ্য পাওয়া যায়নি',
+              description: `${item.id} আইডির পণ্য আর তালিকায় নেই। তালিকা রিফ্রেশ করা হয়েছে।`,
+              variant: 'destructive',
+            });
+            return;
+          }
+        }
+        // Row exists (or this was an INSERT) — RLS filtered the write.
+        console.warn('[ProductPanel.save] supabase returned no rows — RLS blocked the write');
+        showToast({
+          title: 'সংরক্ষণ ব্লক',
+          description: editing
+            ? `${item.id} আইডির পণ্য RLS দ্বারা ব্লক করা হয়েছে। "Products admin write" নীতি অনুপস্থিত বা UPDATE অনুমতি দেয় না।`
+            : '"Products admin write" নীতি অনুপস্থিত, অথবা INSERT অনুমতি দেয় না। schema.sql চালান।',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setEditing(null);
+      setImageDraft(emptyImage);
+      formEl.reset();
+      await load();
+    } catch (err) {
+      const { message } = readError(err);
+      console.error('[ProductPanel.save] unexpected error:', err);
+      showToast({ title: 'সংরক্ষণ ব্যর্থ', description: message || 'অনুগ্রহ করে আবার চেষ্টা করুন', variant: 'destructive' });
+    }
+  };
+  return <Panel title={tr('productManagement', language)}><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="name" defaultValue={editing?.name} placeholder={tr('productNamePlaceholder', language)} required /><Input name="category" defaultValue={editing?.category} placeholder={tr('productCategoryPlaceholder', language)} required /><Input name="price" type="number" defaultValue={editing?.price} placeholder={tr('pricePlaceholder', language)} required /><Input name="stock" type="number" defaultValue={editing?.stock} placeholder={tr('stockPlaceholder', language)} required /><ImageField value={imageDraft} onChange={setImageDraft} /><Button type="submit">{editing ? tr('updateProduct', language) : tr('addProduct', language)}</Button></form><ItemGrid items={products} empty={tr('noProducts', language)} render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.name}</b><p className="text-sm text-ink-400">{item.category} · {money(item.price)} · {tr('stockPlaceholder', language)} {item.stock}</p></div><button onClick={() => { setImageDraft(item.image); setEditing(item); }}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
 }
 function ItemGrid<T>({ items, empty, render }: { items: T[]; empty: string; render: (item: T) => React.ReactNode }) { return <div className="mt-6 space-y-3">{items.length ? items.map((item, index) => <div key={(item as { id: string }).id || index} className="flex items-center gap-3 rounded-2xl bg-ink-50 p-4">{render(item)}</div>) : <p className="rounded-2xl bg-ink-50 p-4 text-ink-400">{empty}</p>}</div>; }
 function Reports({ orders, students, products }: { orders: Order[]; students: Student[]; products: Product[] }) {
@@ -641,30 +755,38 @@ function SettingsPanel({ userId }: { userId: string }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // The UPI ID lives in a global `business_settings` singleton — NOT in the
+  // per-user `profiles` table. Per-user storage was the bug: the payment page
+  // reads `profiles` with `.limit(1)` and picks whichever row happens to be
+  // first, so admin saves to one profile while customers see a different one
+  // (or none at all). The singleton row is shared across all admins and all
+  // customers, survives browser refreshes, and only admins can write it.
   useEffect(() => {
     async function loadSettings() {
       try {
         const { data, error } = await supabase
-          .from('profiles')
+          .from('business_settings')
           .select('upi_id, business_name')
-          .eq('user_id', userId)
+          .eq('id', 1)
           .maybeSingle();
 
         if (error) {
-          // Handle empty error object - likely table doesn't exist or network issue
-          console.warn('Settings query returned empty error - table may not exist');
-          // Continue with empty defaults
+          const { message } = readError(error);
+          console.warn('Settings load failed:', error);
+          setMessage({ type: 'error', text: message || tr('dbConnectionIssue', language) });
         } else if (data) {
           setUpiId(data.upi_id || '');
           setBusinessName(data.business_name || 'Lokenath Art Center');
         }
       } catch (err) {
-        console.warn('Error loading settings, using defaults:', err);
+        const { message } = readError(err);
+        console.warn('Settings load threw:', err);
+        setMessage({ type: 'error', text: message || tr('dbConnectionIssue', language) });
       }
       setLoading(false);
     }
     loadSettings();
-  }, [userId]);
+  }, [language]);
 
   const handleSave = async (event: FormEvent) => {
     event.preventDefault();
@@ -672,48 +794,55 @@ function SettingsPanel({ userId }: { userId: string }) {
     setMessage(null);
 
     try {
-      // Check if profile exists - use maybeSingle to avoid error when no rows
-      const { data: existing, error: fetchError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (fetchError) {
-        // Handle empty error - likely table doesn't exist
-        console.warn('Profile fetch returned error:', fetchError);
-        setMessage({ type: 'error', text: tr('dbConnectionIssue', language) });
+      // is_admin() probe — if it returns false, RLS silently filters the
+      // UPDATE to 0 rows and the user sees a silent failure. Logging the
+      // value makes the cause obvious instead of mysterious.
+      let adminOk = false;
+      try {
+        const probe = await supabase.rpc('is_admin');
+        console.log('[SettingsPanel.handleSave] is_admin() =>', probe);
+        adminOk = Boolean((probe as { data?: unknown } | null)?.data);
+      } catch (probeErr) {
+        const { message } = readError(probeErr);
+        console.warn('[SettingsPanel.handleSave] is_admin probe failed:', probeErr);
+        setMessage({ type: 'error', text: message || 'is_admin() RPC unavailable' });
+        setSaving(false);
+        return;
+      }
+      if (!adminOk) {
+        setMessage({
+          type: 'error',
+          text: 'Admin অনুমতি নেই। public.accounts.role = "admin" নয়।',
+        });
         setSaving(false);
         return;
       }
 
-      if (existing) {
-        // Update existing profile
-        const { error } = await supabase
-          .from('profiles')
-          .update({ upi_id: upiId, business_name: businessName, updated_at: new Date().toISOString() })
-          .eq('user_id', userId);
+      // Upsert the singleton row (id = 1). Using upsert + onConflict means the
+      // call works whether the row exists yet or not — the migration seeds it,
+      // but older databases may not have the seed.
+      const { error } = await supabase
+        .from('business_settings')
+        .upsert(
+          {
+            id: 1,
+            upi_id: upiId.trim(),
+            business_name: businessName.trim() || 'Lokenath Art Center',
+            updated_by: userId,
+          },
+          { onConflict: 'id' }
+        );
 
-        if (error) {
-          console.error('Error updating profile:', error);
-          throw error;
-        }
-      } else {
-        // Create new profile
-        const { error } = await supabase
-          .from('profiles')
-          .insert({ user_id: userId, upi_id: upiId, business_name: businessName });
-
-        if (error) {
-          console.error('Error inserting profile:', error);
-          throw error;
-        }
+      if (error) {
+        const { message } = readError(error);
+        console.error('Save business_settings failed:', error);
+        throw new Error(message || tr('settingsSaveFailed', language));
       }
 
       setMessage({ type: 'success', text: tr('upiSaved', language) });
     } catch (err) {
-      console.error('Error saving settings:', err);
       const errorMessage = err instanceof Error ? err.message : tr('settingsSaveFailed', language);
+      console.error('Error saving settings:', err);
       setMessage({ type: 'error', text: errorMessage });
     } finally {
       setSaving(false);
@@ -843,7 +972,9 @@ function StudentDetailsPanel() {
 
   const saveStudent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    // Capture up front — currentTarget becomes null after the first await.
+    const formEl = event.currentTarget;
+    const data = Object.fromEntries(new FormData(formEl));
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { alert('You must be logged in.'); return; }
@@ -875,7 +1006,7 @@ function StudentDetailsPanel() {
         if (error) throw error;
       }
 
-      event.currentTarget.reset();
+      formEl.reset();
       setEditing(null);
       loadStudents();
       showToast({ title: editing ? 'ছাত্র আপডেট হয়েছে' : 'ছাত্র যোগ হয়েছে', variant: 'success' });
@@ -1057,7 +1188,11 @@ function IncomeReportPanel() {
 
   const saveIncome = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const data = Object.fromEntries(new FormData(event.currentTarget));
+    // Capture the form element synchronously — currentTarget becomes null
+    // after the first await, so anything we read after the supabase round-trip
+    // would resolve to null. Same pattern as CoursePanel.save.
+    const formEl = event.currentTarget;
+    const data = Object.fromEntries(new FormData(formEl));
 
     const incomeData = {
       income_type: String(data.income_type),
@@ -1070,6 +1205,15 @@ function IncomeReportPanel() {
     };
 
     try {
+      // is_admin() probe — RLS silently filters writes to 0 rows when the
+      // signed-in user isn't admin, which looks like "nothing happened".
+      // Logging the value surfaces the real cause.
+      try {
+        const probe = await supabase.rpc('is_admin');
+        console.log('[IncomeReportPanel.save] is_admin() =>', probe);
+      } catch (probeErr) {
+        console.warn('[IncomeReportPanel.save] is_admin probe failed:', probeErr);
+      }
       if (editing) {
         const { error } = await supabase
           .from('income_report')
@@ -1083,12 +1227,17 @@ function IncomeReportPanel() {
         if (error) throw error;
       }
 
-      event.currentTarget.reset();
+      // Reset on the saved reference, then clear editing — mirroring
+      // CoursePanel so the form is in a clean state when it remounts.
+      formEl.reset();
       setEditing(null);
       loadIncomes();
       showToast({ title: editing ? 'আপডেট হয়েছে' : 'যোগ হয়েছে', variant: 'success' });
     } catch (err) {
-      showToast({ title: 'সমস্যা হয়েছে', variant: 'destructive' });
+      // Surface the real failure message instead of a generic "সমস্যা হয়েছে".
+      const { message } = readError(err);
+      console.error('[IncomeReportPanel.save] failed:', err);
+      showToast({ title: 'সংরক্ষণ ব্যর্থ', description: message || 'অনুগ্রহ করে আবার চেষ্টা করুন', variant: 'destructive' });
     }
   };
 
@@ -1097,10 +1246,6 @@ function IncomeReportPanel() {
     const { error } = await supabase.from('income_report').delete().eq('id', id);
     if (error) { console.error(error); alert(error.message); return; }
     loadIncomes();
-  };
-
-  const showToast = ({ title, variant }: { title: string; variant: string }) => {
-    alert(title);
   };
 
   return (
