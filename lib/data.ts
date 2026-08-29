@@ -40,8 +40,8 @@ export type Course = {
   displayTitle: Localized<string>;
   duration: Localized<string>;
   ageGroup: Localized<string>;
-  /** Course-level union. The `en` side is the source of truth; Bengali side mirrors via i18n. */
-  level: Localized<'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels'>;
+  /** Course-level union with localized values. */
+  level: Localized<string>;
   description: Localized<string>;
   image: string;
   color: string;
@@ -57,7 +57,7 @@ export type Product = {
   image: string;
   rating: number;
   reviews: number;
-  badge?: Localized<'Best Seller' | 'New Arrival' | 'Limited Offer'>;
+  badge?: Localized<string>;
 };
 
 export type GalleryItem = {
@@ -72,8 +72,7 @@ export type GalleryItem = {
 export type Testimonial = {
   id: string;
   name: Localized<string>;
-  /** Role label. English side is source of truth; Bengali is shown when language='bn'. */
-  role: Localized<'Parent' | 'Student' | 'Student'>;
+  role: Localized<string>;
   message: Localized<string>;
   avatar: string;
   rating: number;
@@ -83,7 +82,7 @@ export type EventItem = {
   id: string;
   title: Localized<string>;
   date: string;
-  type: Localized<'Competition' | 'Workshop' | 'Exhibition' | 'Camp'>;
+  type: Localized<string>;
   description: Localized<string>;
   image: string;
 };
@@ -200,17 +199,32 @@ export const features: Feature[] = [
 type SeedCourse = Omit<Course, 'displayTitle' | 'duration' | 'ageGroup' | 'level' | 'description' | 'category'> & {
   duration: string;
   ageGroup: string;
-  level: Course['level']['en'];
+  level: string;
   description: string;
   category: string;
 };
 
+const durationBnMap: Record<string, string> = {
+  '2 months': '২ মাস',
+  '3 months': '৩ মাস',
+  '4 months': '৪ মাস',
+  '6 months': '৬ মাস',
+  '12 months': '১২ মাস',
+};
+
+const levelBnMap: Record<string, string> = {
+  'Beginner': 'শুরু',
+  'Intermediate': 'মধ্যম',
+  'Advanced': 'উচ্চ',
+  'All Levels': 'সকল স্তর',
+};
+
 const wrapCourse = (c: SeedCourse): Course => ({
   ...c,
-  displayTitle: en(c.titleEn),
-  duration: en(c.duration),
+  displayTitle: loc(c.titleEn, c.titleBn),
+  duration: loc(c.duration, durationBnMap[c.duration] || c.duration),
   ageGroup: en(c.ageGroup),
-  level: en(c.level),
+  level: loc(c.level, levelBnMap[c.level] || c.level),
   description: en(c.description),
   category: en(c.category),
 });
@@ -595,7 +609,7 @@ export const products: Product[] = [
   },
   {
     id: 'p2',
-    name: loc('Professional Brush Set (12 Pieces)', 'প্রফেশনাল ব্রাশ সেট (১২টি)'),
+    name: loc('Professional Artist Brush Set (12 Pieces)', 'প্রফেশনাল ব্রাশ সেট (১২টি)'),
     category: loc('Brushes', 'ব্রাশ'),
     price: 649,
     originalPrice: 999,
@@ -606,7 +620,7 @@ export const products: Product[] = [
   },
   {
     id: 'p3',
-    name: loc('Canvas Board Pack (5 Pieces)', 'ক্যানভাস বোর্ড প্যাক (৫টি)'),
+    name: loc('Stretched Canvas Board Pack (5 Pieces)', 'ক্যানভাস বোর্ড প্যাক (৫টি)'),
     category: loc('Canvas Boards', 'ক্যানভাস বোর্ড'),
     price: 549,
     image: 'https://images.unsplash.com/photo-1579783901586-d88db74b4da4?w=600&q=80',
@@ -615,7 +629,7 @@ export const products: Product[] = [
   },
   {
     id: 'p4',
-    name: loc('Artist Oil Colour (12 Tubes)', 'আর্টিস্ট অয়েল কালার (১২টি টিউব)'),
+    name: loc('Artist Oil Colour Studio Box (12 Tubes)', 'আর্টিস্ট অয়েল কালার (১২টি টিউব)'),
     category: loc('Oil Colour', 'অয়েল কালার'),
     price: 1499,
     originalPrice: 1999,
@@ -626,16 +640,16 @@ export const products: Product[] = [
   },
   {
     id: 'p5',
-    name: loc('Professional Sketch Book A4', 'প্রফেশনাল স্কেচ বুক এ৪'),
+    name: loc('Heavyweight Hardbound Sketchbook A4 180GSM', 'প্রফেশনাল স্কেচ বুক এ৪ ১৮০ জিএসএম'),
     category: loc('Sketch Books', 'স্কেচ বুক'),
     price: 299,
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&q=80',
     rating: 4.6,
     reviews: 211,
   },
   {
     id: 'p6',
-    name: loc('Acrylic Colour Set (18 Shades)', 'অ্যাক্রিলিক কালার সেট (১৮ শেড)'),
+    name: loc('Artist Acrylic Colour Set (18 Shades)', 'অ্যাক্রিলিক কালার সেট (১৮ শেড)'),
     category: loc('Acrylic Colour', 'অ্যাক্রিলিক কালার'),
     price: 1199,
     originalPrice: 1599,
@@ -646,23 +660,187 @@ export const products: Product[] = [
   },
   {
     id: 'p7',
-    name: loc('Soft Pastels (36 Colours)', 'সফট পাস্তেল (৩৬ রঙ)'),
+    name: loc('Professional Soft Pastels (36 Colours)', 'সফট পাস্তেল (৩৬ রঙ)'),
     category: loc('Soft Pastels', 'সফট পাস্তেল'),
     price: 449,
-    image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1580136579312-94651dfd596d?w=600&q=80',
     rating: 4.7,
     reviews: 73,
   },
   {
     id: 'p8',
-    name: loc('Kids Art Kit (50+ Items)', 'কিডস আর্ট কিট (৫০+ আইটেম)'),
+    name: loc('Ultimate Kids Art & Craft Kit (50+ Items)', 'কিডস আর্ট কিট (৫০+ আইটেম)'),
     category: loc('Kids Art Kit', 'কিডস আর্ট কিট'),
     price: 799,
     originalPrice: 1199,
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+    image: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=600&q=80',
     rating: 4.9,
     reviews: 178,
     badge: loc('New Arrival', 'নতুন আগমন'),
+  },
+  {
+    id: 'p9',
+    name: loc('Graphite Sketching Pencil Set (12 Grades 9B-2H)', 'গ্রাফাইট স্কেচিং পেন্সিল সেট (১২টি গ্রেড)'),
+    category: loc('Pencils', 'পেন্সিল'),
+    price: 399,
+    originalPrice: 499,
+    image: 'https://images.unsplash.com/photo-1585336261026-7f5a4d3b40f8?w=600&q=80',
+    rating: 4.8,
+    reviews: 156,
+    badge: loc('Best Seller', 'সর্বাধিক বিক্রিত'),
+  },
+  {
+    id: 'p10',
+    name: loc('Cotton Canvas Roll 10 Meters High Texture', 'ক্যানভাস রোল (১০ মিটার প্রিমিয়াম টেক্সচার)'),
+    category: loc('Canvas', 'ক্যানভাস'),
+    price: 1899,
+    originalPrice: 2499,
+    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&q=80',
+    rating: 4.7,
+    reviews: 45,
+  },
+  {
+    id: 'p11',
+    name: loc('Designer Poster Colour Set (24 Colours)', 'পোস্টার কালার সেট (২৪ রঙ)'),
+    category: loc('Poster Colour', 'পোস্টার কালার'),
+    price: 349,
+    originalPrice: 499,
+    image: 'https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=600&q=80',
+    rating: 4.5,
+    reviews: 89,
+  },
+  {
+    id: 'p12',
+    name: loc('Clear Oval Acrylic Artist Mixing Palette', 'প্রফেশনাল অ্যাক্রিলিক মিক্সিং প্যালেট'),
+    category: loc('Palette', 'প্যালেট'),
+    price: 199,
+    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+    rating: 4.6,
+    reviews: 34,
+  },
+  {
+    id: 'p13',
+    name: loc('Oil Painting Stainless Palette Knives (5 Set)', 'প্যালেট নাইফ সেট (৫টি বিভিন্ন শেপ)'),
+    category: loc('Palette Knife', 'প্যালেট নাইফ'),
+    price: 279,
+    originalPrice: 399,
+    image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80',
+    rating: 4.8,
+    reviews: 62,
+    badge: loc('Best Seller', 'সর্বাধিক বিক্রিত'),
+  },
+  {
+    id: 'p14',
+    name: loc('Dual-Tip Graphic Art Markers (24 Shades)', 'ডুয়াল-টিপ গ্রাফিক্স আর্ট মার্কার (২৪ রঙ)'),
+    category: loc('Markers', 'মার্কার'),
+    price: 849,
+    originalPrice: 1299,
+    image: 'https://images.unsplash.com/photo-1585336261026-7f5a4d3b40f8?w=600&q=80',
+    rating: 4.9,
+    reviews: 115,
+    badge: loc('New Arrival', 'নতুন আগমন'),
+  },
+  {
+    id: 'p15',
+    name: loc('Waterproof Archival Fineliner Pens (Set of 8)', 'ওয়াটারপ্রুফ ফাইনলাইনার পেন সেট (৮টি)'),
+    category: loc('Fineliners', 'ফাইনলাইনার'),
+    price: 499,
+    originalPrice: 699,
+    image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=600&q=80',
+    rating: 4.9,
+    reviews: 184,
+    badge: loc('Best Seller', 'সর্বাধিক বিক্রিত'),
+  },
+  {
+    id: 'p16',
+    name: loc('Extra Soft Creamy Oil Pastels (50 Shades)', 'প্রিমিয়াম অয়েল পাস্তেল (৫০ শেড)'),
+    category: loc('Oil Pastels', 'অয়েল পাস্তেল'),
+    price: 599,
+    originalPrice: 799,
+    image: 'https://images.unsplash.com/photo-1580136579312-94651dfd596d?w=600&q=80',
+    rating: 4.7,
+    reviews: 92,
+  },
+  {
+    id: 'p17',
+    name: loc('Cold-Pressed Watercolour Paper Pad 300GSM', 'ওয়াটারকালার পেপার প্যাড ৩০০ জিএসএম ২০ শিট'),
+    category: loc('Art Paper', 'আর্ট পেপার'),
+    price: 499,
+    originalPrice: 649,
+    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&q=80',
+    rating: 4.9,
+    reviews: 88,
+    badge: loc('New Arrival', 'নতুন আগমন'),
+  },
+  {
+    id: 'p18',
+    name: loc('Calligraphy Pen & Bottle Ink Set', 'ক্যালিগ্রাফি পেন ও বোটল কালি সেট'),
+    category: loc('Calligraphy Pen', 'ক্যালিগ্রাফি পেন'),
+    price: 599,
+    originalPrice: 899,
+    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+    rating: 4.8,
+    reviews: 41,
+  },
+  {
+    id: 'p19',
+    name: loc('Natural Willow Charcoal Sticks & Pencil Set', 'প্রাকৃতিক উইলো চারকোল স্টিক ও পেন্সিল সেট'),
+    category: loc('Charcoal', 'চারকোল'),
+    price: 349,
+    image: 'https://images.unsplash.com/photo-1578926375605-eaf7559b1458?w=600&q=80',
+    rating: 4.6,
+    reviews: 53,
+  },
+  {
+    id: 'p20',
+    name: loc('Artist Blendable Watercolour Pencils (36 Shades)', 'প্রিমিয়াম কালার পেন্সিল সেট (৩৬ শেড)'),
+    category: loc('Colour Pencils', 'কালার পেন্সিল'),
+    price: 699,
+    originalPrice: 999,
+    image: 'https://images.unsplash.com/photo-1585336261026-7f5a4d3b40f8?w=600&q=80',
+    rating: 4.8,
+    reviews: 129,
+    badge: loc('Best Seller', 'সর্বাধিক বিক্রিত'),
+  },
+  {
+    id: 'p21',
+    name: loc('Precision Metal Geometry & Compass Kit', 'প্রিসিশন মেটাল জ্যামিতি ও কম্পাস সেট'),
+    category: loc('Geometry Tools', 'জ্যামিতির সরঞ্জাম'),
+    price: 399,
+    image: 'https://images.unsplash.com/photo-1579783901586-d88db74b4da4?w=600&q=80',
+    rating: 4.6,
+    reviews: 47,
+  },
+  {
+    id: 'p22',
+    name: loc('Adjustable Beechwood Tabletop Art Easel', 'অ্যাডজাস্টেবল কাঠের টেবিলটপ আর্ট ইজেল'),
+    category: loc('Canvas', 'ক্যানভাস'),
+    price: 999,
+    originalPrice: 1499,
+    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&q=80',
+    rating: 4.9,
+    reviews: 64,
+    badge: loc('Limited Offer', 'সীমিত অফার'),
+  },
+  {
+    id: 'p23',
+    name: loc('Artist Precision Masking Tape (Pack of 3)', 'আর্ট প্রিসিশন মাস্কিং টেপ (৩টি প্যাক)'),
+    category: loc('Masking Tape', 'মাস্কিং টেপ'),
+    price: 249,
+    image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=600&q=80',
+    rating: 4.7,
+    reviews: 38,
+  },
+  {
+    id: 'p24',
+    name: loc('Master Fine Artist Complete Studio Kit (80+ Items)', 'প্রফেশনাল মাস্টার আর্টিস্ট স্টুডিও কিট (৮০+ আইটেম)'),
+    category: loc('Professional Artist Kit', 'প্রফেশনাল আর্টিস্ট কিট'),
+    price: 2499,
+    originalPrice: 3499,
+    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+    rating: 5.0,
+    reviews: 205,
+    badge: loc('Best Seller', 'সর্বাধিক বিক্রিত'),
   },
 ];
 
@@ -876,7 +1054,6 @@ export const navLinks: { label: Localized<string>; href: string }[] = [
   { label: loc('About', 'আমাদের সম্পর্কে'), href: '#about' },
   { label: loc('Courses', 'কোর্স'), href: '#courses' },
   { label: loc('Gallery', 'গ্যালারি'), href: '#gallery' },
-  { label: loc("Students' Works", 'শিক্ষার্থীদের কাজ'), href: '#students' },
   { label: loc('Art Store', 'আর্ট স্টোর'), href: '/store' },
   { label: loc('Events', 'ইভেন্ট'), href: '#events' },
   { label: loc('Blog', 'ব্লগ'), href: '#blog' },

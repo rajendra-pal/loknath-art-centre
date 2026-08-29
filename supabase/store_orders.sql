@@ -2,7 +2,8 @@ create table if not exists public.store_orders (
   id text primary key,
   customer_email text not null,
   created_at timestamptz not null default now(),
-  order_data jsonb not null
+  order_data jsonb not null,
+  transaction_amount numeric
 );
 
 alter table public.store_orders enable row level security;

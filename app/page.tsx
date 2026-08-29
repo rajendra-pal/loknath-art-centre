@@ -4,7 +4,6 @@ import { WhyChooseUs } from '@/components/sections/why-choose-us';
 import { About } from '@/components/sections/about';
 import { Courses } from '@/components/sections/courses';
 import { Gallery } from '@/components/sections/gallery';
-import { FeaturedArtwork } from '@/components/sections/featured-artwork';
 import { Store } from '@/components/sections/store';
 import { Events } from '@/components/sections/events';
 import { Testimonials } from '@/components/sections/testimonials';
@@ -24,7 +23,6 @@ export default function Home() {
       <About />
       <Courses />
       <Gallery />
-      <FeaturedArtwork />
       <Store />
       <Events />
       <Testimonials />

@@ -37,15 +37,15 @@ export function About() {
             <motion.div
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 4, repeat: Infinity }}
-              className="absolute -left-4 top-10 z-10 rounded-2xl bg-white p-4 shadow-xl"
+              className="absolute -left-3 -top-5 sm:-left-4 sm:top-10 z-10 rounded-xl sm:rounded-2xl bg-white p-2.5 sm:p-4 shadow-xl"
             >
-              <div className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center rounded-full bg-palette-orange/10">
-                  <Award className="h-6 w-6 text-palette-orange" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="grid h-8 w-8 sm:h-12 sm:w-12 place-items-center rounded-full bg-palette-orange/10">
+                  <Award className="h-4 w-4 sm:h-6 sm:w-6 text-palette-orange" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-ink-500">15+</div>
-                  <div className="text-xs text-ink-400">{t(aboutContent.experienceBadge)}</div>
+                  <div className="text-base sm:text-2xl font-bold text-ink-500">15+</div>
+                  <div className="text-[10px] sm:text-xs text-ink-400">{t(aboutContent.experienceBadge)}</div>
                 </div>
               </div>
             </motion.div>
@@ -53,15 +53,15 @@ export function About() {
             <motion.div
               animate={{ y: [0, 10, 0] }}
               transition={{ duration: 4, repeat: Infinity, delay: 0.5 }}
-              className="absolute -right-4 top-1/2 z-10 rounded-2xl bg-white p-4 shadow-xl"
+              className="absolute -right-3 sm:-right-4 top-1/2 z-10 rounded-xl sm:rounded-2xl bg-white p-2.5 sm:p-4 shadow-xl"
             >
-              <div className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center rounded-full bg-palette-purple/10">
-                  <GraduationCap className="h-6 w-6 text-palette-purple" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="grid h-8 w-8 sm:h-12 sm:w-12 place-items-center rounded-full bg-palette-purple/10">
+                  <GraduationCap className="h-4 w-4 sm:h-6 sm:w-6 text-palette-purple" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-ink-500">৫০০+</div>
-                  <div className="text-xs text-ink-400">{t(aboutContent.studentsBadge)}</div>
+                  <div className="text-base sm:text-2xl font-bold text-ink-500">৫০০+</div>
+                  <div className="text-[10px] sm:text-xs text-ink-400">{t(aboutContent.studentsBadge)}</div>
                 </div>
               </div>
             </motion.div>
@@ -89,12 +89,12 @@ export function About() {
               </span>
               {t(aboutContent.titleAfter)}
             </h2>
-            <p className="mt-5 text-lg leading-relaxed text-ink-400">
+            <p className="mt-5 text-base sm:text-lg leading-relaxed text-ink-400">
               {t(aboutContent.description)}
             </p>
 
             <blockquote className="my-8 rounded-3xl border-l-4 border-palette-orange bg-white/60 p-6 backdrop-blur-sm">
-              <p className="handwritten text-2xl leading-relaxed text-ink-500">
+              <p className="handwritten text-xl sm:text-2xl leading-relaxed text-ink-500">
                 {t(aboutContent.quote)}
               </p>
               <footer className="mt-3 text-sm text-ink-400">{t(aboutContent.quoteAuthor)}</footer>

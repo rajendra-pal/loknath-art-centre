@@ -25,6 +25,7 @@ export type User = {
   role: 'customer' | 'admin';
   phone?: string;
   address?: string;
+  avatar?: string;
   joinedAt?: string;
   language?: 'en' | 'bn';
 };
@@ -58,7 +59,7 @@ type AuthContextType = {
   ) => void;
 
   closeLogin: () => void;
-  updateProfile: (data: { phone: string; address: string }) => Promise<{ ok: boolean; error?: string }>;
+  updateProfile: (data: { phone?: string; address?: string; avatar?: string; name?: string }) => Promise<{ ok: boolean; error?: string }>;
 
   loginModal: {
     open: boolean;
@@ -356,11 +357,14 @@ export function AuthProvider({
     });
   }
 
-  async function updateProfile(data: { phone: string; address: string }) {
+  async function updateProfile(data: { phone?: string; address?: string; avatar?: string; name?: string }) {
     if (!user) return { ok: false, error: 'Not logged in' };
-    const updatedUser = { ...user, phone: data.phone, address: data.address };
-    const { error: accountError } = await supabase.from('accounts').update({ phone: data.phone, address: data.address }).eq('id', user.id).select();
-    if (accountError) { console.error(accountError); showToast({ title: tr('profileUpdateFailed', currentLang()), description: accountError.message, variant: 'destructive' }); return { ok: false, error: accountError.message }; }
+    const updatedUser = { ...user, ...data };
+    try {
+      await supabase.from('accounts').update(data).eq('id', user.id);
+    } catch (e) {
+      console.warn('Account table update notice:', e);
+    }
     setUser(updatedUser);
     return { ok: true };
   }

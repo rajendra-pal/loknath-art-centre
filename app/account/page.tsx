@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@/components/auth/auth-context';
-import { LogIn, User as UserIcon, Mail, Phone, Calendar, ShieldCheck, LogOut, Edit3, Languages } from 'lucide-react';
+import { LogIn, User as UserIcon, Mail, Phone, Calendar, ShieldCheck, LogOut, Edit3, Languages, Camera } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,18 @@ export default function AccountPage() {
   const [editing, setEditing] = useState(false);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const resultStr = reader.result as string;
+      await updateProfile({ avatar: resultStr });
+      showToast({ title: tr('profileUpdated', language), variant: 'success' });
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -73,19 +85,29 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="container pb-10 pt-28">
+    <div className="container pb-10 pt-20 sm:pt-28">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="overflow-hidden rounded-3xl bg-gradient-to-br from-palette-orange via-palette-rose to-palette-purple p-8 text-white shadow-2xl md:p-12"
+        className="overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-palette-orange via-palette-rose to-palette-purple p-5 sm:p-8 md:p-12 text-white shadow-xl sm:shadow-2xl"
       >
-        <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
-          <div className="grid h-20 w-20 place-items-center rounded-full bg-white/20 backdrop-blur">
-            <UserIcon className="h-10 w-10" />
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-6">
+          <div className="relative group">
+            <div className="grid h-16 w-16 sm:h-20 sm:w-20 place-items-center overflow-hidden rounded-full bg-white/20 backdrop-blur border-2 border-white/40 shadow-inner">
+              {user.avatar ? (
+                <img src={user.avatar} alt={user.name} className="h-full w-full object-cover" />
+              ) : (
+                <UserIcon className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
+              )}
+            </div>
+            <label className="absolute -bottom-1 -right-1 grid h-7 w-7 sm:h-8 sm:w-8 place-items-center rounded-full bg-palette-orange text-white shadow-md cursor-pointer hover:scale-110 active:scale-95 transition">
+              <Camera className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+            </label>
           </div>
           <div>
             <span
-              className={`inline-flex items-center gap-1 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase backdrop-blur`}
+              className={`inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold uppercase backdrop-blur`}
             >
               {user.role === 'admin' ? (
                 <ShieldCheck className="h-3 w-3" />
@@ -94,19 +116,19 @@ export default function AccountPage() {
               )}
               {user.role === 'admin' ? tr('adminBadge', language) : tr('customerBadge', language)}
             </span>
-            <h1 className="mt-2 font-display text-3xl font-bold md:text-4xl">
+            <h1 className="mt-1 sm:mt-2 font-display text-xl sm:text-3xl font-bold md:text-4xl">
               {user.name}
             </h1>
-            <p className="text-white/80">{user.email}</p>
+            <p className="text-xs sm:text-base text-white/80">{user.email}</p>
           </div>
         </div>
       </motion.div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+      <div className="mt-5 sm:mt-8 grid gap-4 sm:gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <div className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg backdrop-blur-sm">
+          <div className="rounded-2xl sm:rounded-3xl border border-white/60 bg-white/90 p-4 sm:p-6 shadow-lg backdrop-blur-sm">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-2xl font-bold text-ink-500">
+              <h2 className="font-display text-lg sm:text-2xl font-bold text-ink-500">
                 {tr('profileInfo', language)}
               </h2>
               {editing ? (
@@ -130,34 +152,34 @@ export default function AccountPage() {
 ) : (
   <button
     onClick={startEditing}
-    className="inline-flex items-center gap-1.5 text-sm font-semibold text-palette-orange hover:underline"
+    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-palette-orange hover:underline"
   >
-    <Edit3 className="h-4 w-4" />
+    <Edit3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
     {tr('edit', language)}
   </button>
 )}
             </div>
-            <div className="mt-6 space-y-4">
+            <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
               {[
                 { icon: UserIcon, label: tr('name', language), value: user.name },
                 { icon: Mail, label: tr('email', language), value: user.email },
                 { icon: Phone, label: tr('phone', language), value: user.phone || tr('notAdded', language) },
                 { icon: Calendar, label: tr('joinedAt', language), value: user.joinedAt },
               ].map((f) => (
-                <div key={f.label} className="flex items-center gap-4 rounded-2xl bg-ink-50/50 p-4">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-palette-orange/10 text-palette-orange">
-                    <f.icon className="h-4 w-4" />
+                <div key={f.label} className="flex items-center gap-3 sm:gap-4 rounded-xl sm:rounded-2xl bg-ink-50/50 p-3 sm:p-4">
+                  <div className="grid h-8 w-8 sm:h-10 sm:w-10 place-items-center rounded-lg sm:rounded-xl bg-palette-orange/10 text-palette-orange">
+                    <f.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-xs text-ink-400">{f.label}</div>
-                    <div className="font-semibold text-ink-500">{editing && f.icon === Phone ? <Input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={tr('phonePlaceholder', language)} className="mt-1 h-10" /> : f.value}</div>
+                    <div className="text-[10px] sm:text-xs text-ink-400">{f.label}</div>
+                    <div className="text-xs sm:text-base font-semibold text-ink-500">{editing && f.icon === Phone ? <Input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder={tr('phonePlaceholder', language)} className="mt-1 h-10" /> : f.value}</div>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-4 flex items-start gap-4 rounded-2xl bg-ink-50/50 p-4">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-palette-orange/10 text-palette-orange">
-                <Edit3 className="h-4 w-4" />
+            <div className="mt-3 sm:mt-4 flex items-start gap-3 sm:gap-4 rounded-xl sm:rounded-2xl bg-ink-50/50 p-3 sm:p-4">
+              <div className="grid h-8 w-8 sm:h-10 sm:w-10 place-items-center rounded-lg sm:rounded-xl bg-palette-orange/10 text-palette-orange">
+                <Edit3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </div>
 
               <div className="flex-1">

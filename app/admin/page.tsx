@@ -17,19 +17,14 @@ import { useLanguage } from '@/lib/i18n/context';
 import { tr } from '@/lib/i18n/strings';
 type Order = { id: string; total: number; createdAt: string; status: string; deliveryDate?: string; adminMessage?: string; items: Array<{ id: string; name: string; price: number; image: string; quantity: number }>; customer: { name: string; email: string; phone: string; address: string; city: string; pincode: string; notes?: string }; paymentMethod: string; paymentStatus: string; paymentReference?: string };
 type Course = { id: string; title: string; duration: string; fee: number; description: string; image: string; isActive: boolean; displayOrder: number };
-type Event = { id: string; title: string; date: string; details: string };
-type Student = { id: string; name: string; village: string; phone: string; course: string; monthlyFee: number; paidMonths: string[] };
-type Blog = { id: string; title: string; category: string; content: string; image: string; date: string };
+type Event = { id: string; title: string; date: string; details: string; image?: string; isActive?: boolean };
+type Student = { id: string; name: string; email?: string; village: string; phone: string; course: string; monthlyFee: number; paidMonths: string[]; admissionDate?: string; status?: string; notes?: string };
+type Blog = { id: string; title: string; category: string; content: string; image: string; date: string; isActive?: boolean };
 type Product = { id: string; name: string; price: number; stock: number; image: string; category: string };
-type Section = 'course' | 'event' | 'student' | 'blog' | 'product' | 'report' | 'settings' | 'student_details' | 'income_report';
+type Section = 'course' | 'event' | 'student' | 'blog' | 'product' | 'report' | 'settings' | 'income_report';
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
 const emptyImage = '/logo.png';
-const seedStudents: Student[] = [
-  { id: 'student-1', name: 'Ananya Das', village: 'Maynaguri', phone: '9876543210', course: 'Drawing', monthlyFee: 800, paidMonths: months },
-  { id: 'student-2', name: 'Rohan Roy', village: 'Sultanpur', phone: '9876543211', course: 'Watercolour', monthlyFee: 1000, paidMonths: ['Jan', 'Feb', 'Mar', 'May'] },
-  { id: 'student-3', name: 'Moumita Pal', village: 'Maynaguri', phone: '9876543212', course: 'Craft', monthlyFee: 700, paidMonths: ['Jan', 'Feb', 'Mar', 'Apr', 'May'] },
-];
 
 const money = (value: number) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
 const id = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -68,26 +63,14 @@ function AdminDashboard({ user }: { user: { id: string; name: string; email: str
           .from('courses')
           .select('id, title, duration, fee, description, image, is_active, display_order'));
       } catch (thrown) {
-        // Supabase JS sometimes throws (network/CORS/Auth) instead of returning
-        // an error object. Convert the throw into a normalized shape so the
-        // rest of the handler treats both paths the same way.
         const message = thrown instanceof Error ? thrown.message : String(thrown);
         console.error('Courses load threw:', thrown);
         showToast({ title: 'কোর্স লোড ব্যর্থ', description: message || 'অনুগ্রহ করে আবার চেষ্টা করুন', variant: 'destructive' });
         return;
       }
       if (error) {
-        // PostgrestError's enumerable properties can be empty when the real
-        // failure is an Auth/CORS/network issue. Coalesce to a printable form.
         const description = error.message || error.hint || error.details || error.code || 'অনুগ্রহ করে আবার চেষ্টা করুন';
-        console.error('Courses load failed:', {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-          hint: error.hint,
-          raw: error,
-          stringified: JSON.stringify(error, Object.getOwnPropertyNames(error)),
-        });
+        console.error('Courses load failed:', error);
         showToast({ title: 'কোর্স লোড ব্যর্থ', description, variant: 'destructive' });
         return;
       }
@@ -114,6 +97,77 @@ function AdminDashboard({ user }: { user: { id: string; name: string; email: str
   const [students, setStudents] = useState<Student[]>([]);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const refreshStudents = async () => {
+      const { data, error } = await supabase.from('students').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        setStudents((data ?? []).map((row: any) => ({
+          id: row.id,
+          name: row.name ?? '',
+          email: row.email ?? '',
+          phone: row.phone ?? '',
+          village: row.village ?? '',
+          course: row.course ?? '',
+          monthlyFee: Number(row.monthly_fee) || 0,
+          paidMonths: Array.isArray(row.paid_months) ? row.paid_months : [],
+          admissionDate: row.admission_date ?? '',
+          status: row.status ?? 'Active',
+          notes: row.notes ?? '',
+        })));
+      }
+    };
+    const refreshEvents = async () => {
+      const { data, error } = await supabase.from('events').select('*').order('date', { ascending: true });
+      if (!error && data) {
+        setEvents((data ?? []).map((row: any) => ({
+          id: row.id,
+          title: row.title ?? '',
+          date: row.date ?? '',
+          details: row.details ?? '',
+          image: row.image ?? '',
+          isActive: row.is_active ?? true,
+        })));
+      }
+    };
+    const refreshBlogs = async () => {
+      const { data, error } = await supabase.from('blogs').select('*').order('created_at', { ascending: false });
+      if (!error && data) {
+        setBlogs((data ?? []).map((row: any) => ({
+          id: row.id,
+          title: row.title ?? '',
+          category: row.category ?? '',
+          content: row.content ?? '',
+          image: row.image ?? emptyImage,
+          date: row.published_at ? new Date(row.published_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'),
+          isActive: row.is_active ?? true,
+        })));
+      }
+    };
+
+    void refreshStudents();
+    void refreshEvents();
+    void refreshBlogs();
+
+    const interval = window.setInterval(() => {
+      void refreshStudents();
+      void refreshEvents();
+      void refreshBlogs();
+    }, 15000);
+
+    const onFocus = () => {
+      void refreshStudents();
+      void refreshEvents();
+      void refreshBlogs();
+    };
+
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(interval);
+    };
+  }, []);
+
   useEffect(() => {
     const refreshOrders = async () => {
       const { data, error } = await supabase.from('store_orders').select('order_data').order('created_at', { ascending: false });
@@ -144,22 +198,21 @@ function AdminDashboard({ user }: { user: { id: string; name: string; email: str
     { key: 'blog', label: tr('blogPosts', language), icon: BookOpen },
     { key: 'product', label: tr('productManagement', language), icon: Package },
     { key: 'report', label: tr('reports', language), icon: BarChart3 },
-    { key: 'student_details', label: tr('studentInfo', language), icon: Users },
     { key: 'income_report', label: tr('incomeReport', language), icon: DollarSign },
     { key: 'settings', label: tr('upiSettings', language), icon: Settings },
   ];
-  return <div className="container pt-28 pb-12">
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-3xl bg-gradient-to-br from-palette-purple via-palette-rose to-palette-orange p-8 text-white shadow-2xl md:p-12">
-      <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold uppercase tracking-widest"><Sparkles className="h-3 w-3" />{tr('adminDashboard', language)}</div>
-      <h1 className="mt-4 font-display text-4xl font-bold md:text-5xl">{tr('welcomeAdmin', language)}, {user.name}!</h1><p className="mt-2 text-white/85">{user.email}</p>
+  return <div className="container pt-20 sm:pt-28 pb-12">
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-palette-purple via-palette-rose to-palette-orange p-5 sm:p-8 md:p-12 text-white shadow-xl sm:shadow-2xl">
+      <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-white/20 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold uppercase tracking-widest"><Sparkles className="h-3 w-3" />{tr('adminDashboard', language)}</div>
+      <h1 className="mt-2 sm:mt-4 font-display text-xl sm:text-3xl md:text-5xl font-bold break-words">{tr('welcomeAdmin', language)}, {user.name}!</h1><p className="mt-1 sm:mt-2 text-xs sm:text-base text-white/85 break-all sm:break-normal">{user.email}</p>
     </motion.div>
-    <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
       {[
         [tr('totalStudents', language), students.length, '#FF6B35'],
         [tr('activeCourses', language), courses.filter((course) => course.isActive).length, '#8B5CF6'],
         [tr('totalOrders', language), orders.length, '#FF5C8A'],
         [tr('totalIncome', language), money(income), '#10B981'],
-      ].map(([label, value, color]) => <div key={String(label)} className="rounded-3xl border border-white/60 bg-white/90 p-6 shadow-lg"><div className="text-sm text-ink-400">{label}</div><div className="mt-2 font-display text-3xl font-bold" style={{ color: String(color) }}>{value}</div></div>)}
+      ].map(([label, value, color]) => <div key={String(label)} className="rounded-2xl sm:rounded-3xl border border-white/60 bg-white/90 p-4 sm:p-6 shadow-lg"><div className="text-xs sm:text-sm text-ink-400">{label}</div><div className="mt-1 sm:mt-2 font-display text-xl sm:text-3xl font-bold" style={{ color: String(color) }}>{value}</div></div>)}
     </div>
     <button onClick={() => setShowOrdersPanel(true)} className="mt-8 inline-flex items-center rounded-full bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-palette-purple">{tr('recentOrdersBtn', language)}</button>
     <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_1.4fr]">
@@ -186,7 +239,6 @@ function AdminDashboard({ user }: { user: { id: string; name: string; email: str
         {active === 'product' && <ProductPanel />}
         {active === 'report' && <AdminReports />}
         {active === 'settings' && <SettingsPanel userId={user.id} />}
-        {active === 'student_details' && <StudentDetailsPanel />}
         {active === 'income_report' && <IncomeReportPanel />}
       </DialogContent>
     </Dialog>
@@ -607,16 +659,548 @@ function CoursePanel({ courses, setCourses }: { courses: Course[]; setCourses: (
 function EventPanel({ events, setEvents }: { events: Event[]; setEvents: (items: Event[]) => void }) {
   const { language } = useLanguage();
   const [editing, setEditing] = useState<Event | null>(null);
-  const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item = { id: editing?.id || id(), title: String(data.title), date: String(data.date), details: String(data.details) }; setEvents(editing ? events.map(value => value.id === item.id ? item : value) : [...events, item]); setEditing(null); event.currentTarget.reset(); };
-  return <Panel title={tr('eventPanelTitle', language)}><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder={tr('eventTitlePlaceholder', language)} required /><Input name="date" type="date" defaultValue={editing?.date} required /><Textarea name="details" defaultValue={editing?.details} placeholder={tr('eventDetailsPlaceholder', language)} className="md:col-span-2" required /><Button type="submit">{editing ? tr('updateEvent', language) : tr('addEvent', language)}</Button></form><ItemGrid items={events} empty={tr('noEvents', language)} render={item => <><div className="flex-1"><b>{item.title}</b><p className="text-sm text-ink-400">{item.date} · {item.details}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const loadEvents = async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from('events').select('*').order('date', { ascending: true });
+    if (error) {
+      const r = readError(error);
+      showToast({ title: tr('loadFailed', language), description: r.message, variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
+    const mapped: Event[] = (data ?? []).map((row: any) => ({
+      id: row.id,
+      title: row.title ?? '',
+      date: row.date ?? '',
+      details: row.details ?? '',
+      image: row.image ?? '',
+      isActive: row.is_active ?? true,
+    }));
+    setEvents(mapped);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void loadEvents();
+  }, []);
+
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form));
+    setSaving(true);
+
+    const row = {
+      title: String(data.title),
+      date: String(data.date),
+      details: String(data.details),
+      is_active: true,
+    };
+
+    const query = editing
+      ? supabase.from('events').update(row).eq('id', editing.id)
+      : supabase.from('events').insert(row);
+
+    const { error } = await query;
+    setSaving(false);
+    if (error) {
+      const r = readError(error);
+      showToast({ title: tr('saveFailed', language), description: r.message, variant: 'destructive' });
+      return;
+    }
+
+    form.reset();
+    setEditing(null);
+    await loadEvents();
+    showToast({ title: editing ? tr('updateEvent', language) : tr('addEvent', language), variant: 'success' });
+  };
+
+  const remove = async (eventId: string) => {
+    if (!confirm('এই ইভেন্টটি মুছতে চান?')) return;
+    const previous = events;
+    setEvents(events.filter((e) => e.id !== eventId));
+
+    const { error } = await supabase.from('events').delete().eq('id', eventId);
+    if (error) {
+      const r = readError(error);
+      setEvents(previous);
+      showToast({ title: tr('deleteFailed', language), description: r.message, variant: 'destructive' });
+      return;
+    }
+    showToast({ title: 'ইভেন্ট মুছে ফেলা হয়েছে', variant: 'success' });
+  };
+
+  return (
+    <Panel title={tr('eventPanelTitle', language)}>
+      <form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2">
+        <Input name="title" defaultValue={editing?.title} placeholder={tr('eventTitlePlaceholder', language)} required />
+        <Input name="date" type="date" defaultValue={editing?.date} required />
+        <Textarea name="details" defaultValue={editing?.details} placeholder={tr('eventDetailsPlaceholder', language)} className="md:col-span-2" required />
+        <div className="md:col-span-2 flex gap-2">
+          <Button type="submit" disabled={saving}>
+            {saving ? tr('saving', language) : editing ? tr('updateEvent', language) : tr('addEvent', language)}
+          </Button>
+          {editing && (
+            <Button type="button" variant="outline" onClick={() => setEditing(null)}>
+              {tr('cancel', language)}
+            </Button>
+          )}
+        </div>
+      </form>
+      {loading ? (
+        <div className="mt-6 flex justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-palette-purple border-t-transparent" />
+        </div>
+      ) : (
+        <ItemGrid
+          items={events}
+          empty={tr('noEvents', language)}
+          render={(item) => (
+            <>
+              <div className="flex-1">
+                <b>{item.title}</b>
+                <p className="text-sm text-ink-400">
+                  {item.date} · {item.details}
+                </p>
+              </div>
+              <button onClick={() => setEditing(item)} aria-label={tr('edit', language)}>
+                <Pencil className="h-4 w-4 text-palette-purple" />
+              </button>
+              <button onClick={() => remove(item.id)} aria-label={tr('delete', language)}>
+                <X className="h-4 w-4 text-rose-500" />
+              </button>
+            </>
+          )}
+        />
+      )}
+    </Panel>
+  );
 }
+
 function StudentPanel({ students, setStudents }: { students: Student[]; setStudents: (items: Student[]) => void }) {
   const { language } = useLanguage();
-  const [village, setVillage] = useState(''); const [editing, setEditing] = useState<Student | null>(null); const filtered = students.filter(student => !village || student.village === village); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item: Student = { id: editing?.id || id(), name: String(data.name), village: String(data.village), phone: String(data.phone), course: String(data.course), monthlyFee: Number(data.monthlyFee), paidMonths: editing?.paidMonths || [] }; setStudents(editing ? students.map(value => value.id === item.id ? item : value) : [...students, item]); setEditing(null); event.currentTarget.reset(); }; const toggleFee = (student: Student, month: string) => setStudents(students.map(value => value.id === student.id ? { ...value, paidMonths: value.paidMonths.includes(month) ? value.paidMonths.filter(value => value !== month) : [...value.paidMonths, month] } : value)); return <Panel title="ছাত্র তালিকা ও মাসিক ফি"><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-3"><Input name="name" defaultValue={editing?.name} placeholder={tr('studentNamePlaceholder', language)} required /><Input name="village" defaultValue={editing?.village} placeholder={tr('villagePlaceholder', language)} required /><Input name="phone" defaultValue={editing?.phone} placeholder={tr('phonePlaceholder', language)} required /><Input name="course" defaultValue={editing?.course} placeholder={tr('coursePlaceholder', language)} required /><Input name="monthlyFee" type="number" defaultValue={editing?.monthlyFee} placeholder={tr('monthlyFeePlaceholder', language)} required /><Button type="submit">{editing ? tr('updateStudent', language) : tr('addStudent', language)}</Button></form><select value={village} onChange={event => setVillage(event.target.value)} className="mt-5 h-11 rounded-xl border border-ink-200 bg-white px-3 text-sm text-ink-500"><option value="">{tr('allVillages', language)}</option>{[...new Set(students.map(student => student.village))].map(value => <option key={value}>{value}</option>)}</select><div className="mt-4 overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm"><thead className="text-ink-400"><tr><th className="p-2">{tr('name', language)}</th><th>{tr('villagePlaceholder', language)}</th><th>{tr('coursePlaceholder', language)}</th><th>{tr('monthlyFeePlaceholder', language)}</th><th>{tr('confirmFeeColumn', language)}</th><th /></tr></thead><tbody>{filtered.map(student => <tr key={student.id} className="border-t border-ink-100"><td className="p-2 font-semibold">{student.name}<span className="block text-xs font-normal text-ink-400">{student.phone}</span></td><td>{student.village}</td><td>{student.course}</td><td>{money(student.monthlyFee)}</td><td><div className="flex gap-1">{months.map(month => <button title={`${month} fee`} onClick={() => toggleFee(student, month)} key={month} className={`rounded px-2 py-1 text-xs ${student.paidMonths.includes(month) ? 'bg-emerald-100 text-emerald-700' : 'bg-ink-100 text-ink-400'}`}>{month}</button>)}</div></td><td><button onClick={() => setEditing(student)}><Pencil className="h-4 w-4 text-palette-purple" /></button></td></tr>)}</tbody></table></div></Panel>;
+  const [village, setVillage] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive' | 'Completed'>('All');
+  const [editing, setEditing] = useState<Student | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const loadStudents = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('students')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      const r = readError(error);
+      showToast({ title: tr('loadFailed', language), description: r.message, variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
+
+    const mapped: Student[] = (data ?? []).map((row: any) => ({
+      id: row.id,
+      name: row.name ?? '',
+      email: row.email ?? '',
+      phone: row.phone ?? '',
+      village: row.village ?? '',
+      course: row.course ?? '',
+      monthlyFee: Number(row.monthly_fee) || 0,
+      paidMonths: Array.isArray(row.paid_months) ? row.paid_months : [],
+      admissionDate: row.admission_date ?? '',
+      status: row.status ?? 'Active',
+      notes: row.notes ?? '',
+    }));
+    setStudents(mapped);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void loadStudents();
+  }, []);
+
+  const filtered = students.filter((student) => {
+    if (village && student.village !== village) return false;
+    if (statusFilter !== 'All' && (student.status || 'Active') !== statusFilter) return false;
+    return true;
+  });
+
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form));
+    setSaving(true);
+
+    const { data: authData } = await supabase.auth.getUser();
+    const row: any = {
+      name: String(data.name || '').trim(),
+      email: String(data.email || '').trim() || null,
+      phone: String(data.phone || '').trim(),
+      village: String(data.village || '').trim() || null,
+      course: String(data.course || '').trim(),
+      monthly_fee: Number(data.monthlyFee) || 0,
+      paid_months: editing?.paidMonths || [],
+      admission_date: String(data.admissionDate || '').trim() || new Date().toISOString().split('T')[0],
+      status: String(data.status || 'Active'),
+      notes: String(data.notes || '').trim() || null,
+    };
+
+    if (authData?.user?.id) {
+      row.account_id = authData.user.id;
+    }
+
+    const query = editing
+      ? supabase.from('students').update(row).eq('id', editing.id).select()
+      : supabase.from('students').insert(row).select();
+
+    const { error } = await query;
+    setSaving(false);
+    if (error) {
+      const r = readError(error);
+      console.error('[StudentPanel.save] error:', error);
+      showToast({ title: tr('saveFailed', language), description: r.message || 'Error saving student details.', variant: 'destructive' });
+      return;
+    }
+
+    form.reset();
+    setEditing(null);
+    await loadStudents();
+    showToast({
+      title: editing ? tr('studentUpdated', language) : tr('studentAdded', language),
+      variant: 'success',
+    });
+  };
+
+  const toggleFee = async (student: Student, month: string) => {
+    const newMonths = student.paidMonths.includes(month)
+      ? student.paidMonths.filter((m) => m !== month)
+      : [...student.paidMonths, month];
+
+    setStudents(students.map((s) => (s.id === student.id ? { ...s, paidMonths: newMonths } : s)));
+
+    const { error } = await supabase
+      .from('students')
+      .update({ paid_months: newMonths })
+      .eq('id', student.id);
+
+    if (error) {
+      const r = readError(error);
+      showToast({ title: tr('toggleFailed', language), description: r.message, variant: 'destructive' });
+      await loadStudents();
+    }
+  };
+
+  const remove = async (studentId: string) => {
+    if (!confirm(tr('confirmDeleteStudent', language))) return;
+    const previous = students;
+    setStudents(students.filter((s) => s.id !== studentId));
+
+    const { error } = await supabase.from('students').delete().eq('id', studentId);
+    if (error) {
+      const r = readError(error);
+      setStudents(previous);
+      showToast({ title: tr('deleteFailed', language), description: r.message, variant: 'destructive' });
+      return;
+    }
+    showToast({ title: tr('studentDeleted', language), variant: 'success' });
+  };
+
+  return (
+    <Panel title={language === 'bn' ? 'ছাত্র তালিকা ও মাসিক ফি' : 'Student List & Monthly Fees'}>
+      <form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-3">
+        <Input name="name" defaultValue={editing?.name} placeholder={tr('studentNamePlaceholder', language)} required />
+        <Input name="phone" defaultValue={editing?.phone} placeholder={tr('phonePlaceholder', language)} required />
+        <Input name="email" type="email" defaultValue={editing?.email} placeholder={tr('studentEmailPlaceholder', language)} />
+        <Input name="village" defaultValue={editing?.village} placeholder={tr('villagePlaceholder', language)} />
+        <Input name="course" defaultValue={editing?.course} placeholder={tr('coursePlaceholder', language)} required />
+        <Input name="monthlyFee" type="number" defaultValue={editing?.monthlyFee} placeholder={tr('monthlyFeePlaceholder', language)} required />
+        <Input name="admissionDate" type="date" defaultValue={editing?.admissionDate} />
+        <select
+          name="status"
+          defaultValue={editing?.status || 'Active'}
+          className="h-11 rounded-xl border border-ink-200 bg-white px-3 text-sm text-ink-500"
+        >
+          <option value="Active">{language === 'bn' ? 'সক্রিয়' : 'Active'}</option>
+          <option value="Inactive">{language === 'bn' ? 'নিষ্ক্রিয়' : 'Inactive'}</option>
+          <option value="Completed">{language === 'bn' ? 'সম্পন্ন' : 'Completed'}</option>
+        </select>
+        <Textarea name="notes" defaultValue={editing?.notes} placeholder={tr('notesPlaceholder', language)} className="md:col-span-3" />
+        <div className="md:col-span-3 flex gap-2">
+          <Button type="submit" disabled={saving}>
+            {saving ? tr('saving', language) : editing ? tr('updateStudent', language) : tr('addStudent', language)}
+          </Button>
+          {editing && (
+            <Button type="button" variant="outline" onClick={() => setEditing(null)}>
+              {tr('cancel', language)}
+            </Button>
+          )}
+        </div>
+      </form>
+
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <select
+          value={village}
+          onChange={(event) => setVillage(event.target.value)}
+          className="h-11 rounded-xl border border-ink-200 bg-white px-3 text-sm text-ink-500"
+        >
+          <option value="">{tr('allVillages', language)}</option>
+          {[...new Set(students.map((student) => student.village).filter(Boolean))].map((val) => (
+            <option key={val} value={val}>
+              {val}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex gap-1.5">
+          {(['All', 'Active', 'Inactive', 'Completed'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
+                statusFilter === f ? 'bg-palette-purple text-white' : 'bg-ink-100 text-ink-500 hover:bg-ink-200'
+              }`}
+            >
+              {f === 'All'
+                ? tr('statusAll', language)
+                : f === 'Active'
+                ? tr('statusActive', language)
+                : f === 'Inactive'
+                ? tr('statusInactive', language)
+                : tr('statusCompleted', language)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="mt-6 flex justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-palette-purple border-t-transparent" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <p className="mt-4 rounded-2xl bg-ink-50 p-4 text-ink-400">{tr('noStudents', language)}</p>
+      ) : (
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="text-ink-400">
+              <tr>
+                <th className="p-2">{tr('name', language)}</th>
+                <th>{tr('villagePlaceholder', language)}</th>
+                <th>{tr('coursePlaceholder', language)}</th>
+                <th>{tr('monthlyFeePlaceholder', language)}</th>
+                <th>{tr('confirmFeeColumn', language)}</th>
+                <th>{tr('statusColumn', language)}</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((student) => (
+                <tr key={student.id} className="border-t border-ink-100">
+                  <td className="p-2 font-semibold">
+                    {student.name}
+                    <span className="block text-xs font-normal text-ink-400">{student.phone}</span>
+                  </td>
+                  <td>{student.village || '—'}</td>
+                  <td>{student.course}</td>
+                  <td className="font-bold text-palette-orange">{money(student.monthlyFee)}</td>
+                  <td>
+                    <div className="flex flex-wrap gap-1">
+                      {months.map((month) => (
+                        <button
+                          title={`${month} fee`}
+                          onClick={() => toggleFee(student, month)}
+                          key={month}
+                          className={`rounded px-2 py-1 text-xs transition ${
+                            student.paidMonths.includes(month)
+                              ? 'bg-emerald-100 font-bold text-emerald-700'
+                              : 'bg-ink-100 text-ink-400 hover:bg-ink-200'
+                          }`}
+                        >
+                          {month}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        student.status === 'Active'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : student.status === 'Inactive'
+                          ? 'bg-slate-100 text-slate-500'
+                          : 'bg-blue-100 text-blue-700'
+                      }`}
+                    >
+                      {student.status === 'Active'
+                        ? tr('statusActive', language)
+                        : student.status === 'Inactive'
+                        ? tr('statusInactive', language)
+                        : tr('statusCompleted', language)}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditing(student)} aria-label={tr('edit', language)}>
+                        <Pencil className="h-4 w-4 text-palette-purple" />
+                      </button>
+                      <button onClick={() => remove(student.id)} aria-label={tr('delete', language)}>
+                        <X className="h-4 w-4 text-rose-500" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
 }
+
 function BlogPanel({ blogs, setBlogs }: { blogs: Blog[]; setBlogs: (items: Blog[]) => void }) {
   const { language } = useLanguage();
-  const [editing, setEditing] = useState<Blog | null>(null); const save = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const data = Object.fromEntries(new FormData(event.currentTarget)); const item: Blog = { id: editing?.id || id(), title: String(data.title), category: String(data.category), content: String(data.content), image: editing?.image || emptyImage, date: editing?.date || new Date().toLocaleDateString('en-GB') }; setBlogs(editing ? blogs.map(value => value.id === item.id ? item : value) : [item, ...blogs]); setEditing(null); event.currentTarget.reset(); }; return <Panel title={tr('blogPosts', language)}><form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2"><Input name="title" defaultValue={editing?.title} placeholder={tr('blogTitlePlaceholder', language)} required /><Input name="category" defaultValue={editing?.category} placeholder={tr('blogCategoryPlaceholder', language)} required /><ImageField value={editing?.image} onChange={image => setEditing(current => ({ ...(current || { id: '', title: '', category: '', content: '', date: '' }), image }))} /><Textarea name="content" defaultValue={editing?.content} placeholder={tr('blogContentPlaceholder', language)} className="md:col-span-2" required /><Button type="submit">{editing ? tr('updatePost', language) : tr('publishPost', language)}</Button></form><ItemGrid items={blogs} empty={tr('noBlogPosts', language)} render={item => <><img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" /><div className="flex-1"><b>{item.title}</b><p className="text-sm text-ink-400">{item.category} · {item.date}</p></div><button onClick={() => setEditing(item)}><Pencil className="h-4 w-4 text-palette-purple" /></button></>} /></Panel>;
+  const [editing, setEditing] = useState<Blog | null>(null);
+  const [imageDraft, setImageDraft] = useState<string>(emptyImage);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const loadBlogs = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('blogs')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      const r = readError(error);
+      showToast({ title: tr('loadFailed', language), description: r.message, variant: 'destructive' });
+      setLoading(false);
+      return;
+    }
+
+    const mapped: Blog[] = (data ?? []).map((row: any) => ({
+      id: row.id,
+      title: row.title ?? '',
+      category: row.category ?? '',
+      content: row.content ?? '',
+      image: row.image ?? emptyImage,
+      date: row.published_at ? new Date(row.published_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'),
+      isActive: row.is_active ?? true,
+    }));
+    setBlogs(mapped);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void loadBlogs();
+  }, []);
+
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const data = Object.fromEntries(new FormData(form));
+    setSaving(true);
+
+    const titleStr = String(data.title);
+    const slug = titleStr.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `blog-${Date.now()}`;
+
+    const row: any = {
+      title: titleStr,
+      category: String(data.category),
+      content: String(data.content),
+      image: imageDraft !== emptyImage ? imageDraft : (editing?.image || emptyImage),
+      is_active: editing?.isActive ?? true,
+      published_at: new Date().toISOString(),
+    };
+    if (!editing) {
+      row.slug = slug;
+    }
+
+    const query = editing
+      ? supabase.from('blogs').update(row).eq('id', editing.id)
+      : supabase.from('blogs').insert(row);
+
+    const { error } = await query;
+    setSaving(false);
+    if (error) {
+      const r = readError(error);
+      showToast({ title: tr('saveFailed', language), description: r.message, variant: 'destructive' });
+      return;
+    }
+
+    form.reset();
+    setImageDraft(emptyImage);
+    setEditing(null);
+    await loadBlogs();
+    showToast({ title: editing ? tr('updatePost', language) : tr('publishPost', language), variant: 'success' });
+  };
+
+  const remove = async (blogId: string) => {
+    if (!confirm('এই ব্লগ পোস্টটি মুছতে চান?')) return;
+    const previous = blogs;
+    setBlogs(blogs.filter((b) => b.id !== blogId));
+
+    const { error } = await supabase.from('blogs').delete().eq('id', blogId);
+    if (error) {
+      const r = readError(error);
+      setBlogs(previous);
+      showToast({ title: tr('deleteFailed', language), description: r.message, variant: 'destructive' });
+      return;
+    }
+    showToast({ title: 'ব্লগ পোস্ট মুছে ফেলা হয়েছে', variant: 'success' });
+  };
+
+  return (
+    <Panel title={tr('blogPosts', language)}>
+      <form onSubmit={save} className="mt-5 grid gap-3 md:grid-cols-2">
+        <Input name="title" defaultValue={editing?.title} placeholder={tr('blogTitlePlaceholder', language)} required />
+        <Input name="category" defaultValue={editing?.category} placeholder={tr('blogCategoryPlaceholder', language)} required />
+        <ImageField value={imageDraft !== emptyImage ? imageDraft : editing?.image} onChange={setImageDraft} />
+        <Textarea name="content" defaultValue={editing?.content} placeholder={tr('blogContentPlaceholder', language)} className="md:col-span-2" required />
+        <div className="md:col-span-2 flex gap-2">
+          <Button type="submit" disabled={saving}>
+            {saving ? tr('saving', language) : editing ? tr('updatePost', language) : tr('publishPost', language)}
+          </Button>
+          {editing && (
+            <Button type="button" variant="outline" onClick={() => { setEditing(null); setImageDraft(emptyImage); }}>
+              {tr('cancel', language)}
+            </Button>
+          )}
+        </div>
+      </form>
+      {loading ? (
+        <div className="mt-6 flex justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-palette-purple border-t-transparent" />
+        </div>
+      ) : (
+        <ItemGrid
+          items={blogs}
+          empty={tr('noBlogPosts', language)}
+          render={(item) => (
+            <>
+              <img src={item.image} alt="" className="h-16 w-16 rounded-xl object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).src = emptyImage; }} />
+              <div className="flex-1">
+                <b>{item.title}</b>
+                <p className="text-sm text-ink-400">
+                  {item.category} · {item.date}
+                </p>
+              </div>
+              <button onClick={() => { setImageDraft(item.image); setEditing(item); }} aria-label={tr('edit', language)}>
+                <Pencil className="h-4 w-4 text-palette-purple" />
+              </button>
+              <button onClick={() => remove(item.id)} aria-label={tr('delete', language)}>
+                <X className="h-4 w-4 text-rose-500" />
+              </button>
+            </>
+          )}
+        />
+      )}
+    </Panel>
+  );
 }
 function ProductPanel() {
   const { language } = useLanguage();
@@ -931,214 +1515,7 @@ function SettingsPanel({ userId }: { userId: string }) {
   );
 }
 
-type StudentDetail = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  village: string;
-  course: string;
-  monthly_fee: number;
-  paid_months: string[];
-  admission_date: string;
-  status: string;
-  notes: string;
-};
 
-function StudentDetailsPanel() {
-  const [students, setStudents] = useState<StudentDetail[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<StudentDetail | null>(null);
-  const [filter, setFilter] = useState<'All' | 'Active' | 'Inactive'>('All');
-
-  useEffect(() => {
-    loadStudents();
-  }, []);
-
-  async function loadStudents() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('students')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (data) {
-      setStudents(data);
-    }
-    setLoading(false);
-  }
-
-  const filteredStudents = students.filter(s => filter === 'All' || s.status === filter);
-
-  const saveStudent = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    // Capture up front — currentTarget becomes null after the first await.
-    const formEl = event.currentTarget;
-    const data = Object.fromEntries(new FormData(formEl));
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { alert('You must be logged in.'); return; }
-    const studentData = {
-      account_id: user.id,
-      name: String(data.name),
-      email: String(data.email) || null,
-      phone: String(data.phone),
-      village: String(data.village) || null,
-      course: String(data.course),
-      monthly_fee: Number(data.monthly_fee) || 0,
-      paid_months: editing?.paid_months || [],
-      admission_date: String(data.admission_date) || new Date().toISOString().split('T')[0],
-      status: String(data.status) || 'Active',
-      notes: String(data.notes) || null,
-    };
-
-    try {
-      if (editing) {
-        const { error } = await supabase
-          .from('students')
-          .update(studentData)
-          .eq('id', editing.id).select();
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('students')
-          .insert(studentData).select();
-        if (error) throw error;
-      }
-
-      formEl.reset();
-      setEditing(null);
-      loadStudents();
-      showToast({ title: editing ? 'ছাত্র আপডেট হয়েছে' : 'ছাত্র যোগ হয়েছে', variant: 'success' });
-    } catch (err) {
-      showToast({ title: 'সমস্যা হয়েছে', variant: 'destructive' });
-    }
-  };
-
-  const deleteStudent = async (id: string) => {
-    if (!confirm('এই ছাত্রকে মুছতে চান?')) return;
-    const { error } = await supabase.from('students').delete().eq('id', id);
-    if (error) { console.error(error); alert(error.message); return; }
-    loadStudents();
-  };
-
-  const toggleMonth = async (student: StudentDetail, month: string) => {
-    const newMonths = student.paid_months.includes(month)
-      ? student.paid_months.filter(m => m !== month)
-      : [...student.paid_months, month];
-
-    const { error } = await supabase
-      .from('students')
-      .update({ paid_months: newMonths })
-      .eq('id', student.id).select();
-    if (error) { console.error(error); alert(error.message); return; }
-
-    loadStudents();
-  };
-
-  const showToast = ({ title, variant }: { title: string; variant: string }) => {
-    // Simple toast notification
-    alert(title);
-  };
-
-  return (
-    <Panel title="ছাত্র তথ্য (ডেটাবেস)">
-      <div className="mt-5 rounded-2xl bg-gradient-to-r from-purple-50 to-pink-50 p-4">
-        <p className="text-sm text-purple-700">এই তথ্য ডেটাবেসে সংরক্ষিত হবে এবং রিয়েল-টাইম আপডেট হবে।</p>
-      </div>
-
-      <form onSubmit={saveStudent} className="mt-5 grid gap-3 md:grid-cols-3">
-        <Input name="name" defaultValue={editing?.name} placeholder="ছাত্রের নাম" required />
-        <Input name="email" type="email" defaultValue={editing?.email} placeholder="ইমেল" />
-        <Input name="phone" defaultValue={editing?.phone} placeholder="ফোন নম্বর" required />
-        <Input name="village" defaultValue={editing?.village} placeholder="গ্রাম" />
-        <Input name="course" defaultValue={editing?.course} placeholder="কোর্স" required />
-        <Input name="monthly_fee" type="number" defaultValue={editing?.monthly_fee} placeholder="মাসিক ফি" required />
-        <Input name="admission_date" type="date" defaultValue={editing?.admission_date} />
-        <select name="status" defaultValue={editing?.status || 'Active'} className="h-11 rounded-xl border border-ink-200 bg-white px-3 text-sm text-ink-500">
-          <option value="Active">সক্রিয়</option>
-          <option value="Inactive">নিষ্ক্রিয়</option>
-          <option value="Completed">সম্পন্ন</option>
-        </select>
-        <Textarea name="notes" defaultValue={editing?.notes} placeholder="নোট" className="md:col-span-3" />
-        <div className="md:col-span-3 flex gap-2">
-          <Button type="submit">{editing ? 'আপডেট করুন' : 'যোগ করুন'}</Button>
-          {editing && <Button type="button" variant="outline" onClick={() => setEditing(null)}>বাতিল</Button>}
-        </div>
-      </form>
-
-      <div className="mt-5 flex gap-2">
-        {(['All', 'Active', 'Inactive'] as const).map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${filter === f ? 'bg-palette-purple text-white' : 'bg-ink-100 text-ink-500'}`}
-          >
-            {f === 'All' ? 'সব' : f === 'Active' ? 'সক্রিয়' : 'নিষ্ক্রিয়'}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center p-8"><div className="h-8 w-8 animate-spin rounded-full border-4 border-palette-purple border-t-transparent" /></div>
-      ) : filteredStudents.length === 0 ? (
-        <p className="mt-4 rounded-2xl bg-ink-50 p-4 text-ink-400">কোনো ছাত্র নেই।</p>
-      ) : (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[900px] text-left text-sm">
-            <thead className="bg-ink-50 text-ink-400">
-              <tr>
-                <th className="p-3">নাম</th>
-                <th className="p-3">ফোন</th>
-                <th className="p-3">গ্রাম</th>
-                <th className="p-3">কোর্স</th>
-                <th className="p-3">ফি</th>
-                <th className="p-3">মাস</th>
-                <th className="p-3">স্ট্যাটাস</th>
-                <th className="p-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStudents.map(student => (
-                <tr key={student.id} className="border-t border-ink-100">
-                  <td className="p-3 font-semibold">{student.name}<span className="block text-xs text-ink-400">{student.email}</span></td>
-                  <td className="p-3">{student.phone}</td>
-                  <td className="p-3">{student.village}</td>
-                  <td className="p-3">{student.course}</td>
-                  <td className="p-3 font-bold text-palette-orange">{money(student.monthly_fee)}</td>
-                  <td className="p-3">
-                    <div className="flex flex-wrap gap-1">
-                      {months.map(m => (
-                        <button
-                          key={m}
-                          onClick={() => toggleMonth(student, m)}
-                          className={`rounded px-2 py-1 text-xs ${student.paid_months?.includes(m) ? 'bg-emerald-100 text-emerald-700' : 'bg-ink-100 text-ink-400'}`}
-                        >
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <span className={`rounded-full px-2 py-1 text-xs font-semibold ${student.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-ink-100 text-ink-400'}`}>
-                      {student.status === 'Active' ? 'সক্রিয়' : student.status === 'Inactive' ? 'নিষ্ক্রিয়' : 'সম্পন্ন'}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex gap-2">
-                      <button onClick={() => setEditing(student)}><Pencil className="h-4 w-4 text-palette-purple" /></button>
-                      <button onClick={() => deleteStudent(student.id)}><X className="h-4 w-4 text-red-500" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </Panel>
-  );
-}
 
 type IncomeRecord = {
   id: string;

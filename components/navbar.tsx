@@ -109,12 +109,12 @@ export function Navbar() {
           : 'bg-transparent'
       )}
     >
-      <nav className="container flex h-20 items-center justify-between">
+      <nav className="container flex h-14 sm:h-20 items-center justify-between">
         {/* Logo */}
-        <Link href={pathname === '/' ? '#home' : '/#home'} className="flex items-center gap-3">
+        <Link href={pathname === '/' ? '#home' : '/#home'} className="flex items-center gap-2 sm:gap-3">
           <motion.div
             whileHover={{ rotate: -8, scale: 1.05 }}
-            className="relative h-14 w-14"
+            className="relative hidden sm:block h-14 w-14"
           >
             <Image
               src="/logo.png"
@@ -125,12 +125,12 @@ export function Navbar() {
             />
           </motion.div>
           <div className="flex flex-col leading-tight">
-            <span className="font-display text-lg font-bold text-ink-500">
+            <span className="font-display text-base sm:text-lg font-bold text-ink-500">
               Loknath
             </span>
             <span
               className={cn(
-                'text-[10px] font-semibold uppercase tracking-[0.18em]',
+                'text-[9px] sm:text-[10px] font-semibold uppercase tracking-[0.18em]',
                 isStorePage ? 'text-palette-purple' : 'text-palette-orange'
               )}
             >

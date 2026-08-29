@@ -177,7 +177,7 @@ export const ui: Record<string, Localized<string>> = {
   slideAria: { en: 'Slide', bn: 'স্লাইড' },
 
   storeEyebrow: { en: 'New! Art store', bn: 'নতুন! আর্ট স্টোর' },
-  storeTitle: { en: 'Premium supplies, affordable prices', bn: 'প্রিমিয়াম সরঞ্জাম, সাশ্রয়ী মূল্যে' },
+  storeTitleHome: { en: 'Premium supplies, affordable prices', bn: 'প্রিমিয়াম সরঞ্জাম, সাশ্রয়ী মূল্যে' },
   storeDescription:
     {
       en: 'From the same artist who teaches your kids. Curated supplies for students, hobbyists, and professionals.',
@@ -681,19 +681,17 @@ export const ui: Record<string, Localized<string>> = {
   adminStudentDeleted: { en: 'Student deleted', bn: 'ছাত্র মুছে ফেলা হয়েছে' },
   adminIncomeAdded: { en: 'Added', bn: 'যোগ হয়েছে' },
   adminIncomeUpdated: { en: 'Updated', bn: 'আপডেট হয়েছে' },
-  adminPlaceholders: {
-    studentName: { en: 'Student name', bn: 'ছাত্রের নাম' },
-    studentEmail: { en: 'Email', bn: 'ইমেল' },
-    studentPhone: { en: 'Phone number', bn: 'ফোন নম্বর' },
-    studentVillage: { en: 'Village', bn: 'গ্রাম' },
-    studentCourse: { en: 'Course', bn: 'কোর্স' },
-    studentFee: { en: 'Monthly fee', bn: 'মাসিক ফি' },
-    studentNotes: { en: 'Notes', bn: 'নোট' },
-    incomeAmount: { en: 'Amount', bn: 'টাকার পরিমাণ' },
-    incomePayment: { en: 'Payment method (UPI/Cash)', bn: 'পেমেন্ট মাধ্যম (UPI/Cash)' },
-    incomeDescription: { en: 'Description', bn: 'বিবরণ' },
-    incomeReference: { en: 'Reference ID (order ID)', bn: 'রেফারেন্স ID (অর্ডার ID)' },
-  },
+  adminPlaceholderStudentName: { en: 'Student name', bn: 'ছাত্রের নাম' },
+  adminPlaceholderStudentEmail: { en: 'Email', bn: 'ইমেল' },
+  adminPlaceholderStudentPhone: { en: 'Phone number', bn: 'ফোন নম্বর' },
+  adminPlaceholderStudentVillage: { en: 'Village', bn: 'গ্রাম' },
+  adminPlaceholderStudentCourse: { en: 'Course', bn: 'কোর্স' },
+  adminPlaceholderStudentFee: { en: 'Monthly fee', bn: 'মাসিক ফি' },
+  adminPlaceholderStudentNotes: { en: 'Notes', bn: 'নোট' },
+  adminPlaceholderIncomeAmount: { en: 'Amount', bn: 'টাকার পরিমাণ' },
+  adminPlaceholderIncomePayment: { en: 'Payment method (UPI/Cash)', bn: 'পেমেন্ট মাধ্যম (UPI/Cash)' },
+  adminPlaceholderIncomeDescription: { en: 'Description', bn: 'বিবরণ' },
+  adminPlaceholderIncomeReference: { en: 'Reference ID (order ID)', bn: 'রেফারেন্স ID (অর্ডার ID)' },
   adminDeliveryDateComing:
     {
       en: 'Your order {products} is coming on {date}.',
@@ -706,8 +704,8 @@ export const ui: Record<string, Localized<string>> = {
     },
 };
 
-export function tr(key: keyof typeof ui, language: 'en' | 'bn'): string {
-  const entry = ui[key];
+export function tr(key: keyof typeof ui | string, language: 'en' | 'bn'): string {
+  const entry = (ui as Record<string, { en: string; bn: string }>)[key];
   if (!entry) {
     // Unknown key — surface the key itself rather than crashing the page.
     // This keeps auth flows and other call sites alive even if a translation

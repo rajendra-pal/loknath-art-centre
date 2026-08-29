@@ -29,7 +29,7 @@ export function WhyChooseUs() {
           description={tr('whyChooseDescription', language)}
         />
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
           {features.map((f, i) => {
             const Icon = (Icons as any)[f.icon] ?? Icons.Sparkles;
             return (
@@ -40,22 +40,22 @@ export function WhyChooseUs() {
                 viewport={{ once: true, margin: '-30px' }}
                 transition={{ duration: 0.5, delay: i * 0.05 }}
                 whileHover={{ y: -6, rotate: -0.5 }}
-                className="group relative overflow-hidden rounded-3xl border border-white/60 bg-white/70 p-6 backdrop-blur-sm transition-all hover:shadow-2xl hover:shadow-ink-500/10"
+                className="group relative overflow-hidden rounded-2xl sm:rounded-3xl border border-white/60 bg-white/70 p-3 sm:p-6 backdrop-blur-sm transition-all hover:shadow-2xl hover:shadow-ink-500/10"
               >
                 <div
-                  className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-10 transition-opacity group-hover:opacity-30"
+                  className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 sm:h-32 sm:w-32 rounded-full opacity-10 transition-opacity group-hover:opacity-30"
                   style={{ background: f.color }}
                 />
                 <div
-                  className="mb-5 inline-grid h-14 w-14 place-items-center rounded-2xl shadow-lg transition group-hover:scale-110"
+                  className="mb-3 sm:mb-5 inline-grid h-9 w-9 sm:h-14 sm:w-14 place-items-center rounded-xl sm:rounded-2xl shadow-lg transition group-hover:scale-110"
                   style={{ background: f.color }}
                 >
-                  <Icon className="h-6 w-6 text-white" />
+                  <Icon className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
                 </div>
-                <h3 className="font-display text-lg font-bold text-ink-500">
+                <h3 className="font-display text-sm sm:text-lg font-bold text-ink-500">
                   {t(f.title)}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-400">
+                <p className="mt-1 sm:mt-2 text-xs sm:text-sm leading-relaxed text-ink-400">
                   {t(f.description)}
                 </p>
               </motion.div>
@@ -63,7 +63,7 @@ export function WhyChooseUs() {
           })}
         </div>
 
-        <BrushDivider color="#FF6B35" className="mt-16" />
+        <BrushDivider color="#FF6B35" className="mt-8 sm:mt-16" />
       </div>
     </section>
   );
