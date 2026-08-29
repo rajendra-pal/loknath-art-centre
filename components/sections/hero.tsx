@@ -24,7 +24,7 @@ export function Hero() {
     <section
       ref={ref}
       id="home"
-      className="relative min-h-screen overflow-hidden pt-12"
+      className="relative min-h-0 lg:min-h-screen overflow-hidden pt-16 sm:pt-12 pb-10 lg:pb-0"
     >
       <div
         className="absolute left-0 right-0 bottom-0 top-20 -z-10 bg-cover bg-center bg-no-repeat"
@@ -37,11 +37,11 @@ export function Hero() {
         }}
       />
 
-      <div className="container relative z-10 flex items-center min-h-[calc(100vh-80px)]">
-        <div className="max-w-2xl flex flex-col justify-end lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-16">
+      <div className="container relative z-10 flex items-center min-h-0 lg:min-h-[calc(100vh-80px)]">
+        <div className="w-full max-w-2xl flex flex-col justify-end lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-16">
           <motion.div
             style={{ y: yLeft, opacity }}
-            className="relative z-10 pt-52 lg:pt-28 self-center lg:pl-4"
+            className="relative z-10 pt-36 sm:pt-32 lg:pt-28 self-center lg:pl-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -57,7 +57,7 @@ export function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.5 }}
-              className="mt-6 max-w-[480px] text-lg leading-relaxed text-ink-400"
+              className="mt-4 sm:mt-6 max-w-[480px] text-sm sm:text-lg leading-relaxed text-ink-400"
             >
               <span className="font-bold text-ink-500">{t(heroContent.brandLead)}</span>{' '}
               {t(heroContent.description)}
@@ -67,18 +67,18 @@ export function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.7 }}
-              className="mt-8 flex flex-wrap items-center gap-4"
+              className="mt-6 sm:mt-8 flex flex-row items-center gap-2 sm:gap-4"
             >
-              <a href="#courses">
-                <Button size="lg">
+              <a href="#courses" className="flex-1 sm:flex-none">
+                <Button size="lg" className="w-full h-11 px-3.5 text-xs sm:h-14 sm:px-8 sm:text-lg justify-center">
                   {t(heroContent.primaryCta)}
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </a>
-              <a href="/store">
-                <Button size="lg" variant="outline">
-                  <span className="grid h-8 w-8 place-items-center rounded-full bg-palette-orange text-white">
-                    <Play className="h-3.5 w-3.5 fill-white" />
+              <a href="/store" className="flex-1 sm:flex-none">
+                <Button size="lg" variant="outline" className="w-full h-11 px-3.5 text-xs sm:h-14 sm:px-8 sm:text-lg justify-center">
+                  <span className="grid h-6 w-6 sm:h-8 sm:w-8 place-items-center rounded-full bg-palette-orange text-white">
+                    <Play className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5 fill-white" />
                   </span>
                   {t(heroContent.secondaryCta)}
                 </Button>
@@ -89,7 +89,7 @@ export function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.9 }}
-              className="mt-10 flex items-center gap-4"
+              className="mt-8 lg:mt-10 flex items-center gap-4"
             >
               <div className="flex -space-x-3">
                 {[
@@ -120,7 +120,7 @@ export function Hero() {
 
           <motion.div
             style={{ y: yRight }}
-            className="relative h-[520px] lg:h-[600px] xl:h-[980px]"
+            className="relative hidden lg:block lg:h-[600px] xl:h-[980px]"
           >
             <svg
               className="absolute bottom-16 right-8 h-24 w-24 text-palette-yellow/60"

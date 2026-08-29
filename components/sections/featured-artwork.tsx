@@ -45,19 +45,19 @@ export function FeaturedArtwork() {
               {featuredArtwork.map((a) => (
                 <div
                   key={a.id}
-                  className="relative flex-[0_0_85%] sm:flex-[0_0_60%] lg:flex-[0_0_45%]"
+                  className="relative flex-[0_0_85%] sm:flex-[0_0_48%] lg:flex-[0_0_32%]"
                 >
                   <motion.div
-                    whileHover={{ y: -8 }}
-                    className="group relative aspect-[4/5] overflow-hidden rounded-3xl shadow-2xl"
+                    whileHover={{ y: -6 }}
+                    className="group relative h-[240px] sm:h-[280px] md:h-[320px] w-full overflow-hidden rounded-2xl sm:rounded-3xl shadow-lg hover:shadow-2xl transition-all"
                   >
                     <img
                       src={a.image}
                       alt={t(a.title)}
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-ink-700/80 via-ink-700/0 to-transparent" />
-                    <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                    <div className="absolute inset-0 bg-gradient-to-t from-ink-700/90 via-ink-700/25 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                       <p className="text-xs font-semibold uppercase tracking-widest text-palette-yellow">
                         {t(a.medium)}
                       </p>

@@ -57,6 +57,11 @@ vi.mock('next/image', () => ({
   default: ({ src, alt, ...props }: any) => <img src={src} alt={alt} {...props} />,
 }));
 
+// 6. Mock LoadingScreen
+vi.mock('@/components/loading-screen', () => ({
+  LoadingScreen: () => null,
+}));
+
 describe('StorePage Component', () => {
   it('renders store heading and main sections', () => {
     render(<StorePage />);

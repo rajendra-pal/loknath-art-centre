@@ -21,7 +21,7 @@ const defaultProducts = [
     category: 'ওয়াটারকালার',
     price: 899,
     originalPrice: 1299,
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
     rating: 4.8,
     reviews: 142,
     badge: 'সর্বাধিক বিক্রিত',
@@ -32,7 +32,7 @@ const defaultProducts = [
     category: 'ব্রাশ',
     price: 649,
     originalPrice: 999,
-    image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=600&q=80',
     rating: 4.9,
     reviews: 98,
     badge: 'নতুন আগমন',
@@ -42,7 +42,7 @@ const defaultProducts = [
     name: 'ক্যানভাস বোর্ড প্যাক (৫টি)',
     category: 'ক্যানভাস',
     price: 549,
-    image: 'https://images.unsplash.com/photo-1579783901586-d88db74b4da4?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1579783901586-d88db74b4da4?w=600&q=80',
     rating: 4.7,
     reviews: 67,
   },
@@ -52,17 +52,17 @@ const defaultProducts = [
     category: 'অয়েল কালার',
     price: 1499,
     originalPrice: 1999,
-    image: 'https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=600&q=80',
     rating: 4.9,
     reviews: 56,
     badge: 'সীমিত অফার',
   },
   {
     id: 'p5',
-    name: 'প্রফেশনাল স্কেচ বুক এ৪',
+    name: 'প্রফেশনাল স্কেচ বুক এ৪ ১৮০ জিএসএম',
     category: 'স্কেচ বুক',
     price: 299,
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&q=80',
     rating: 4.6,
     reviews: 211,
   },
@@ -72,7 +72,7 @@ const defaultProducts = [
     category: 'অ্যাক্রিলিক',
     price: 1199,
     originalPrice: 1599,
-    image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80',
     rating: 4.8,
     reviews: 89,
     badge: 'সর্বাধিক বিক্রিত',
@@ -82,7 +82,7 @@ const defaultProducts = [
     name: 'সফট পাস্তেল (৩৬ রঙ)',
     category: 'পাস্তেল',
     price: 449,
-    image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1580136579312-94651dfd596d?w=600&q=80',
     rating: 4.7,
     reviews: 73,
   },
@@ -92,27 +92,30 @@ const defaultProducts = [
     category: 'কিডস আর্ট',
     price: 799,
     originalPrice: 1199,
-    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&q=80',
+    image: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=600&q=80',
     rating: 4.9,
     reviews: 178,
     badge: 'নতুন আগমন',
   },
   {
     id: 'p9',
-    name: 'পেন্সিল সেট (২৪টি)',
+    name: 'গ্রাফাইট স্কেচিং পেন্সিল সেট (১২টি গ্রেড)',
     category: 'পেন্সিল',
     price: 399,
-    image: 'https://images.unsplash.com/photo-1578926375605-eaf7559b1458?w=400&q=80',
-    rating: 4.5,
+    originalPrice: 499,
+    image: 'https://images.unsplash.com/photo-1585336261026-7f5a4d3b40f8?w=600&q=80',
+    rating: 4.8,
     reviews: 156,
+    badge: 'সর্বাধিক বিক্রিত',
   },
   {
     id: 'p10',
-    name: 'ক্যানভাস রোল (১০ মিটার)',
+    name: 'ক্যানভাস রোল (১০ মিটার প্রিমিয়াম টেক্সচার)',
     category: 'ক্যানভাস',
-    price: 899,
-    image: 'https://images.unsplash.com/photo-1579783901586-d88db74b4da4?w=400&q=80',
-    rating: 4.6,
+    price: 1899,
+    originalPrice: 2499,
+    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&q=80',
+    rating: 4.7,
     reviews: 45,
   },
   {
@@ -121,18 +124,142 @@ const defaultProducts = [
     category: 'পোস্টার কালার',
     price: 349,
     originalPrice: 499,
-    image: 'https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=400&q=80',
-    rating: 4.4,
+    image: 'https://images.unsplash.com/photo-1578321272176-b7bbc0679853?w=600&q=80',
+    rating: 4.5,
     reviews: 89,
   },
   {
     id: 'p12',
-    name: 'প্রফেশনাল প্যালেট',
+    name: 'প্রফেশনাল অ্যাক্রিলিক মিক্সিং প্যালেট',
     category: 'প্যালেট',
     price: 199,
-    image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=400&q=80',
-    rating: 4.3,
+    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+    rating: 4.6,
     reviews: 34,
+  },
+  {
+    id: 'p13',
+    name: 'প্যালেট নাইফ সেট (৫টি বিভিন্ন শেপ)',
+    category: 'প্যালেট নাইফ',
+    price: 279,
+    originalPrice: 399,
+    image: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80',
+    rating: 4.8,
+    reviews: 62,
+    badge: 'সর্বাধিক বিক্রিত',
+  },
+  {
+    id: 'p14',
+    name: 'ডুয়াল-টিপ গ্রাফিক্স আর্ট মার্কার (২৪ রঙ)',
+    category: 'মার্কার',
+    price: 849,
+    originalPrice: 1299,
+    image: 'https://images.unsplash.com/photo-1585336261026-7f5a4d3b40f8?w=600&q=80',
+    rating: 4.9,
+    reviews: 115,
+    badge: 'নতুন আগমন',
+  },
+  {
+    id: 'p15',
+    name: 'ওয়াটারপ্রুফ ফাইনলাইনার পেন সেট (৮টি)',
+    category: 'ফাইনলাইনার',
+    price: 499,
+    originalPrice: 699,
+    image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=600&q=80',
+    rating: 4.9,
+    reviews: 184,
+    badge: 'সর্বাধিক বিক্রিত',
+  },
+  {
+    id: 'p16',
+    name: 'প্রিমিয়াম অয়েল পাস্তেল (৫০ শেড)',
+    category: 'পাস্তেল',
+    price: 599,
+    originalPrice: 799,
+    image: 'https://images.unsplash.com/photo-1580136579312-94651dfd596d?w=600&q=80',
+    rating: 4.7,
+    reviews: 92,
+  },
+  {
+    id: 'p17',
+    name: 'ওয়াটারকালার পেপার প্যাড ৩০০ জিএসএম ২০ শিট',
+    category: 'আর্ট পেপার',
+    price: 499,
+    originalPrice: 649,
+    image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&q=80',
+    rating: 4.9,
+    reviews: 88,
+    badge: 'নতুন আগমন',
+  },
+  {
+    id: 'p18',
+    name: 'ক্যালিগ্রাফি পেন ও বোটল কালি সেট',
+    category: 'ক্যালিগ্রাফি পেন',
+    price: 599,
+    originalPrice: 899,
+    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+    rating: 4.8,
+    reviews: 41,
+  },
+  {
+    id: 'p19',
+    name: 'প্রাকৃতিক উইলো চারকোল স্টিক ও পেন্সিল সেট',
+    category: 'চারকোল',
+    price: 349,
+    image: 'https://images.unsplash.com/photo-1578926375605-eaf7559b1458?w=600&q=80',
+    rating: 4.6,
+    reviews: 53,
+  },
+  {
+    id: 'p20',
+    name: 'প্রিমিয়াম কালার পেন্সিল সেট (৩৬ শেড)',
+    category: 'কালার পেন্সিল',
+    price: 699,
+    originalPrice: 999,
+    image: 'https://images.unsplash.com/photo-1585336261026-7f5a4d3b40f8?w=600&q=80',
+    rating: 4.8,
+    reviews: 129,
+    badge: 'সর্বাধিক বিক্রিত',
+  },
+  {
+    id: 'p21',
+    name: 'প্রিসিশন মেটাল জ্যামিতি ও কম্পাস সেট',
+    category: 'জ্যামিতির সরঞ্জাম',
+    price: 399,
+    image: 'https://images.unsplash.com/photo-1579783901586-d88db74b4da4?w=600&q=80',
+    rating: 4.6,
+    reviews: 47,
+  },
+  {
+    id: 'p22',
+    name: 'অ্যাডজাস্টেবল কাঠের টেবিলটপ আর্ট ইজেল',
+    category: 'ক্যানভাস',
+    price: 999,
+    originalPrice: 1499,
+    image: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=600&q=80',
+    rating: 4.9,
+    reviews: 64,
+    badge: 'সীমিত অফার',
+  },
+  {
+    id: 'p23',
+    name: 'আর্ট প্রিসিশন মাস্কিং টেপ (৩টি প্যাক)',
+    category: 'মাস্কিং টেপ',
+    price: 249,
+    image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=600&q=80',
+    rating: 4.7,
+    reviews: 38,
+  },
+  {
+    id: 'p24',
+    name: 'প্রফেশনাল মাস্টার আর্টিস্ট স্টুডিও কিট (৮০+ আইটেম)',
+    category: 'প্রফেশনাল কিট',
+    price: 2499,
+    originalPrice: 3499,
+    image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+    rating: 5.0,
+    reviews: 205,
+    badge: 'সর্বাধিক বিক্রিত',
   },
 ];
 
@@ -144,8 +271,12 @@ const categories = [
   { name: 'পেন্সিল', icon: Pencil, image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=300&q=80', count: 45 },
   { name: 'ব্রাশ', icon: Brush, image: 'https://images.unsplash.com/photo-1578926375605-eaf7559b1458?w=300&q=80', count: 28 },
   { name: 'ক্যানভাস', icon: Package, image: 'https://images.unsplash.com/photo-1579783901586-d88db74b4da4?w=300&q=80', count: 15 },
-  { name: 'স্কেচ বুক', icon: Pencil, image: 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=300&q=80', count: 22 },
-  { name: 'পাস্তেল', icon: Palette, image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=300&q=80', count: 19 },
+  { name: 'স্কেচ বুক', icon: Pencil, image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=300&q=80', count: 22 },
+  { name: 'পাস্তেল', icon: Palette, image: 'https://images.unsplash.com/photo-1580136579312-94651dfd596d?w=300&q=80', count: 19 },
+  { name: 'মার্কার', icon: Pencil, image: 'https://images.unsplash.com/photo-1585336261026-7f5a4d3b40f8?w=300&q=80', count: 16 },
+  { name: 'ফাইনলাইনার', icon: Pencil, image: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=300&q=80', count: 14 },
+  { name: 'আর্ট পেপার', icon: Package, image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=300&q=80', count: 12 },
+  { name: 'কিডস আর্ট', icon: Award, image: 'https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=300&q=80', count: 20 },
 ];
 
 type CartItem = {
@@ -214,7 +345,7 @@ export default function StorePage() {
   const [showWishlist, setShowWishlist] = React.useState(false);
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [wishlist, setWishlist] = React.useState<WishlistItem[]>([]);
-  const [products, setProducts] = React.useState<Product[]>([]);
+  const [products, setProducts] = React.useState<Product[]>(defaultProducts);
   const [cartLoading, setCartLoading] = React.useState(false);
 
   // Persisted cart — cart_items is the source of truth. The local `cart` state
@@ -282,6 +413,36 @@ export default function StorePage() {
       void supabase.removeChannel(channel);
     };
   }, [user, loadCart]);
+  React.useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: true });
+        if (!error && data && data.length > 0) {
+          setProducts(
+            data.map((p: any) => ({
+              id: p.id,
+              name: p.name_bn || p.name,
+              category: p.category,
+              price: Number(p.price),
+              originalPrice: p.original_price ? Number(p.original_price) : undefined,
+              image: p.image || 'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80',
+              rating: Number(p.rating) || 4.8,
+              reviews: Number(p.reviews_count) || 50,
+              badge: p.badge || undefined,
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn('Using default art product catalog:', err);
+      }
+    }
+    void fetchProducts();
+  }, []);
+
   const [showMobileFilters, setShowMobileFilters] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
   const [showProductSidebar, setShowProductSidebar] = React.useState(false);
@@ -470,7 +631,6 @@ export default function StorePage() {
     setShowCart(false);
     setShowCheckout(true);
   };
-
   const saveOrder = async () => {
     if (!user) {
       promptLogin();
@@ -494,33 +654,33 @@ export default function StorePage() {
     }
 
     const order: StoreOrder = {
-      id: `LAC-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      items: cart,
-      total: cartTotal,
-      customer: {
-        name: user.name,
-        email: user.email,
-        ...checkoutDetails,
-      },
-      paymentMethod,
-      paymentStatus: paymentMethod === 'Cash on Delivery' ? 'COD Selected' : 'Payment Submitted',
-      paymentReference: paymentMethod === 'Cash on Delivery' ? undefined : paymentReference.trim(),
-      status: 'New Order',
-    };
+        id: `LAC-${crypto.randomUUID()}`,
+        createdAt: new Date().toISOString(),
+        items: cart,
+        total: cartTotal,
+        customer: {
+          name: user.name,
+          email: user.email,
+          ...checkoutDetails,
+        },
+        paymentMethod,
+        paymentStatus: paymentMethod === 'Cash on Delivery' ? 'COD Selected' : 'Payment Submitted',
+        paymentReference: paymentMethod === 'Cash on Delivery' ? undefined : paymentReference.trim(),
+        status: 'New Order',
+      };
 
     const { data, error } = await supabase.from('store_orders').insert({
       id: order.id,
-      account_id: user.id,
       customer_email: order.customer.email,
       created_at: order.createdAt,
       order_data: order,
+      transaction_amount: cartTotal,
     }).select();
-    if (error) {
-      console.error(error);
-      showToast({ title: 'Unable to save order', description: error.message, variant: 'destructive' });
-      throw error;
-    }
+      if (error) {
+        console.error('SaveOrder error:', JSON.stringify(error, null, 2));
+        showToast({ title: 'Unable to save order', description: error.message || JSON.stringify(error), variant: 'destructive' });
+        throw error;
+      }
 
     // Clear the persisted cart so a refresh or another device sees an empty
     // cart. cart_items is the source of truth — the local state mirror follows
@@ -607,7 +767,7 @@ export default function StorePage() {
     const exists = wishlist.find((item) => item.id === product.id);
     if (!exists) {
       const { error } = await supabase.from('wishlists').insert({ account_id: user.id, product_id: product.id }).select();
-      if (error) { console.error(error); showToast({ title: 'Unable to save wishlist', description: error.message, variant: 'destructive' }); throw error; }
+      if (error) { console.error('Add wishlist error:', error); showToast({ title: 'Unable to save wishlist', description: error.message || JSON.stringify(error), variant: 'destructive' }); throw error; }
       setWishlist((prev) => [
         ...prev,
         {
@@ -623,7 +783,11 @@ export default function StorePage() {
         variant: 'success',
       });
     } else {
-      showToast({ title: 'এই পণ্য ইচ্ছেতালিকায় আছে' });
+      // Toggle off: remove from wishlist
+      const { error } = await supabase.from('wishlists').delete().eq('account_id', user.id).eq('product_id', product.id);
+      if (error) { console.error('Remove wishlist error:', error); showToast({ title: 'Unable to remove from wishlist', description: error.message || JSON.stringify(error), variant: 'destructive' }); throw error; }
+      setWishlist((prev) => prev.filter((item) => item.id !== product.id));
+      showToast({ title: 'ইচ্ছেতালিকায় থেকে সরানো হয়েছে', description: product.name, variant: 'default' });
     }
   };
 
@@ -1684,8 +1848,7 @@ export default function StorePage() {
                       paymentReference: transactionId.trim(),
                       status: 'New Order',
                     };
-                    if (!user) throw new Error('You must be logged in to place an order.');
-                    const { error } = await supabase.from('store_orders').insert({ id: order.id, account_id: user.id, customer_email: order.customer.email, created_at: order.createdAt, order_data: order }).select();
+                    const { error } = await supabase.from('store_orders').insert({ id: order.id, customer_email: order.customer.email, created_at: order.createdAt, order_data: order, transaction_amount: cartTotal }).select();
                     if (error) { console.error(error); showToast({ title: 'Payment order could not be saved', description: error.message, variant: 'destructive' }); throw error; }
                     setCart([]);
                     setShowPayment(false);

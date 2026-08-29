@@ -80,19 +80,22 @@ export function Store() {
                     className="group relative h-full overflow-hidden rounded-3xl border border-white/60 bg-white/90 shadow-lg backdrop-blur-sm transition-all hover:shadow-2xl"
                   >
                     {/* Badge */}
-                    {p.badge && (
-                      <span
-                        className={cn(
-                          'absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-md',
-                          badgeStyles[t(p.badge)]
-                        )}
-                      >
-                        {t(p.badge) === 'সর্বাধিক বিক্রিত' && <BadgeCheck className="h-3 w-3" />}
-                        {t(p.badge) === 'নতুন আগমন' && <Sparkles className="h-3 w-3" />}
-                        {t(p.badge) === 'সীমিত অফার' && <Zap className="h-3 w-3" />}
-                        {t(p.badge)}
-                      </span>
-                    )}
+                    {p.badge && (() => {
+                      const badgeText = t(p.badge);
+                      return (
+                        <span
+                          className={cn(
+                            'absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-md',
+                            badgeStyles[badgeText]
+                          )}
+                        >
+                          {(badgeText === 'সর্বাধিক বিক্রিত' || badgeText === 'Best Seller') && <BadgeCheck className="h-3 w-3" />}
+                          {(badgeText === 'নতুন আগমন' || badgeText === 'New Arrival') && <Sparkles className="h-3 w-3" />}
+                          {(badgeText === 'সীমিত অফার' || badgeText === 'Limited Offer') && <Zap className="h-3 w-3" />}
+                          {badgeText}
+                        </span>
+                      );
+                    })()}
 
                     {/* Wishlist */}
                     <button
