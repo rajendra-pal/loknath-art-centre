@@ -20,17 +20,20 @@ export function AuthModal() {
   const [passwordValue, setPasswordValue] = React.useState('');
 
   const loginWithGoogle = async () => {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    },
-  });
+    const origin = typeof window !== 'undefined' && window.location.origin 
+      ? window.location.origin 
+      : (process.env.NEXT_PUBLIC_SITE_URL || '');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${origin}/auth/callback`,
+      },
+    });
 
-  if (error) {
-    console.error(error);
-  }
-};
+    if (error) {
+      console.error(error);
+    }
+  };
 
   React.useEffect(() => {
     setMode(loginModal.mode);

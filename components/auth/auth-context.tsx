@@ -340,7 +340,9 @@ export function AuthProvider({
   }
 
   async function loginWithGoogle() {
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const origin = typeof window !== 'undefined' && window.location.origin 
+      ? window.location.origin 
+      : (process.env.NEXT_PUBLIC_SITE_URL || '');
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
