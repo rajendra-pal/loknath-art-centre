@@ -9,9 +9,11 @@ import { showToast } from '@/components/ui/toaster';
 import { contactInfo } from '@/lib/data';
 import { useLanguage } from '@/lib/i18n/context';
 import { tr, ui } from '@/lib/i18n/strings';
+import { useAuth } from '@/components/auth/auth-context';
 
 export function Contact() {
   const { t, language } = useLanguage();
+  const { user } = useAuth();
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     showToast({
@@ -96,6 +98,7 @@ export function Contact() {
           {/* Right: Form + Map */}
           <div className="space-y-6 lg:col-span-3">
             <motion.form
+              key={user?.id || 'guest'}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -107,20 +110,20 @@ export function Contact() {
                   <label className="mb-2 block text-sm font-semibold text-ink-500">
                     {t(contactInfo.form.name)}
                   </label>
-                  <Input name="name" required placeholder={t(contactInfo.form.placeholders.name)} />
+                  <Input name="name" required defaultValue={user?.name || ''} placeholder={t(contactInfo.form.placeholders.name)} />
                 </div>
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-ink-500">
                     {t(contactInfo.form.phone)}
                   </label>
-                  <Input name="phone" type="tel" required placeholder={t(contactInfo.form.placeholders.phone)} />
+                  <Input name="phone" type="tel" required defaultValue={user?.phone || ''} placeholder={t(contactInfo.form.placeholders.phone)} />
                 </div>
               </div>
               <div className="mt-4">
                 <label className="mb-2 block text-sm font-semibold text-ink-500">
                   {t(contactInfo.form.email)}
                 </label>
-                <Input name="email" type="email" required placeholder={t(contactInfo.form.placeholders.email)} />
+                <Input name="email" type="email" required defaultValue={user?.email || ''} placeholder={t(contactInfo.form.placeholders.email)} />
               </div>
               <div className="mt-4">
                 <label className="mb-2 block text-sm font-semibold text-ink-500">

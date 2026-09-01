@@ -112,8 +112,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       language,
       setLanguage,
       t: <T,>(value: Localized<T> | T) => t(value, language),
-      tArray: <T,>(value: ReadonlyArray<Localized<T>> | ReadonlyArray<T>) =>
-        tArray(value, language),
+      tArray: ((value: any) => tArray(value, language)) as any,
     }),
     [language, setLanguage]
   );

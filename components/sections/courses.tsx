@@ -11,6 +11,7 @@ import type { Localized } from '@/lib/i18n/pick';
 import { supabase } from '@/lib/supabase/client';
 import { useLanguage } from '@/lib/i18n/context';
 import { tr, ui } from '@/lib/i18n/strings';
+import { useAuth } from '@/components/auth/auth-context';
 
 /** Bengali-level lookup table — same for both languages (used as a CSS key). */
 const LEVEL_COLORS_BN: Record<string, string> = {
@@ -68,7 +69,9 @@ const withCacheBust = (image: string, version?: string): string => {
 
 export function Courses() {
   const { t, language } = useLanguage();
+  const { openLogin, user } = useAuth();
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+
   const [courses, setCourses] = useState<Course[]>(seedCourses);
   const [versions, setVersions] = useState<Record<string, string>>({});
 
@@ -307,7 +310,11 @@ export function Courses() {
                   <button
                     onClick={() => {
                       setSelectedCourse(null);
-                      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      if (user && user.name && user.email) {
+                        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      } else {
+                        openLogin('register', 'customer');
+                      }
                     }}
                     className="mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-palette-orange px-8 py-3 font-semibold text-white transition hover:bg-palette-orange/90"
                   >

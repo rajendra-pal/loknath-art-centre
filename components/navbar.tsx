@@ -257,7 +257,16 @@ export function Navbar() {
                   +91 62963 77408
                 </a>
                 {!isAdmin && (
-                  <Button onClick={() => { openLogin('register', 'customer'); setOpen(false); }}>
+                  <Button
+                    onClick={() => {
+                      setOpen(false);
+                      if (user && user.name && user.email) {
+                        document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
+                      } else {
+                        openLogin('register', 'customer');
+                      }
+                    }}
+                  >
                     <Sparkles className="h-4 w-4" />
                     {tr('enrollNowCta', language)}
                   </Button>

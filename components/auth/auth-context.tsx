@@ -53,8 +53,12 @@ type AuthContextType = {
 
   logout: () => Promise<void>;
 
+  resetPassword: (email: string) => Promise<{ ok: boolean; error?: string }>;
+
+  updatePassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
+
   openLogin: (
-    mode?: 'login' | 'register',
+    mode?: 'login' | 'register' | 'forgot_password' | 'reset_password',
     role?: 'admin' | 'customer'
   ) => void;
 
@@ -63,7 +67,7 @@ type AuthContextType = {
 
   loginModal: {
     open: boolean;
-    mode: 'login' | 'register';
+    mode: 'login' | 'register' | 'forgot_password' | 'reset_password';
     role: 'admin' | 'customer';
   };
 };
@@ -82,16 +86,35 @@ export function AuthProvider({
 
   const [loginModal, setLoginModal] = React.useState({
     open: false,
-    mode: 'login' as 'login' | 'register',
+    mode: 'login' as 'login' | 'register' | 'forgot_password' | 'reset_password',
     role: 'customer' as 'customer' | 'admin',
   });
 
   React.useEffect(() => {
-    getCurrentUser();
+    const initializeAuth = async () => {
+      await getCurrentUser();
+
+      if (typeof window !== 'undefined' && window.location.search.includes('reset_password=true')) {
+        window.history.replaceState(null, '', window.location.pathname);
+
+        // Verify if there's an active session before showing the reset form
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setLoginModal({ open: true, mode: 'reset_password', role: 'customer' });
+        } else {
+          console.error('Password reset session not found');
+        }
+      }
+    };
+
+    initializeAuth();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setLoginModal({ open: true, mode: 'reset_password', role: 'customer' });
+      }
       getCurrentUser();
     });
 
@@ -268,6 +291,7 @@ export function AuthProvider({
   async function register({
     name,
     email,
+    phone,
     password,
   }: {
     name: string;
@@ -310,7 +334,7 @@ export function AuthProvider({
     if (existing) {
       const { error: claimError } = await supabase
         .from('accounts')
-        .update({ id: signUpData.user.id, name, role: 'customer' })
+        .update({ id: signUpData.user.id, name, phone: phone || null, role: 'customer' })
         .eq('id', existing.id);
 
       if (claimError) accountError = { message: claimError.message };
@@ -319,6 +343,7 @@ export function AuthProvider({
         id: signUpData.user.id,
         name,
         email,
+        phone: phone || null,
         role: 'customer',
       });
 
@@ -364,16 +389,51 @@ export function AuthProvider({
     if (!user) return { ok: false, error: 'Not logged in' };
     const updatedUser = { ...user, ...data };
     try {
-      await supabase.from('accounts').update(data).eq('id', user.id);
-    } catch (e) {
+      const { error } = await supabase.from('accounts').update(data).eq('id', user.id);
+      if (error) {
+        console.error('Account table update error:', error.message ?? error);
+        return { ok: false, error: error.message };
+      }
+    } catch (e: any) {
       console.warn('Account table update notice:', e);
+      return { ok: false, error: e?.message || 'Update failed' };
     }
     setUser(updatedUser);
     return { ok: true };
   }
 
+  async function resetPassword(email: string) {
+    const origin = typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_SITE_URL || '');
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${origin}/auth/callback?type=recovery`,
+    });
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    return { ok: true };
+  }
+
+  async function updatePassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    showToast({
+      title: tr('passwordUpdated', currentLang()),
+      variant: 'success',
+    });
+
+    return { ok: true };
+  }
+
   function openLogin(
-    mode: 'login' | 'register' = 'login',
+    mode: 'login' | 'register' | 'forgot_password' | 'reset_password' = 'login',
     role: 'customer' | 'admin' = 'customer'
   ) {
     setLoginModal({
@@ -399,6 +459,8 @@ export function AuthProvider({
         register,
         loginWithGoogle,
         logout,
+        resetPassword,
+        updatePassword,
         openLogin,
         closeLogin,
         updateProfile,
