@@ -1,4 +1,4 @@
-# 🎨 Loknath Art Centre
+# 🎨 Loknath Art Centre 🦚
 
 A premium, modern website for **Loknath Art Centre**, a professional drawing school.
 
